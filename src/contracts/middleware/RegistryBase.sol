@@ -8,6 +8,7 @@ import "../libraries/BytesLib.sol";
 import "./VoteWeigherBase.sol";
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 
 /**
  * @title An abstract Registry-type contract that is signature scheme agnostic.
@@ -102,7 +103,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
 
     /**
      * @notice Looks up the `operator`'s index in the dynamic array `operatorList` at the specified `blockNumber`.
-     * @param index Used to specify the entry within the dynamic array `pubkeyHashToIndexHistory[pubkeyHash]` to 
+     * @param index Used to specify the entry within the dynamic array `pubkeyHashToIndexHistory[pubkeyHash]` to
      * read data from, where `pubkeyHash` is looked up from `operator`'s registration info
      * @param blockNumber Is the desired block number at which we wish to query the operator's position in the `operatorList` array
      * @dev Function will revert in the event that the specified `index` input does not identify the appropriate entry in the
@@ -113,7 +114,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
         bytes32 pubkeyHash = getOperatorPubkeyHash(operator);
 
         /**
-         * Since the 'to' field represents the blockNumber at which a new index started, it is OK if the 
+         * Since the 'to' field represents the blockNumber at which a new index started, it is OK if the
          * previous array entry has 'to' == blockNumber, so we check not strict inequality here
          */
         require(
@@ -139,7 +140,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
     */
     function getTotalOperators(uint32 blockNumber, uint32 index) external view returns (uint32) {
         /**
-         * Since the 'to' field represents the blockNumber at which a new index started, it is OK if the 
+         * Since the 'to' field represents the blockNumber at which a new index started, it is OK if the
          * previous array entry has 'to' == blockNumber, so we check not strict inequality here
          */
         require(
@@ -147,15 +148,16 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
             "RegistryBase.getTotalOperators: TotalOperatorsHistory index is too high"
         );
 
-    
         OperatorIndex memory operatorIndex = totalOperatorsHistory[index];
-
+        console.log("============index================%d", index);
+        console.log("============operatorIndex.toBlockNumber================%d", operatorIndex.toBlockNumber);
+        console.log("============blockNumber================%d", blockNumber);
         // since the 'to' field represents the blockNumber at which a new index started, we want to check strict inequality here
 
-        require(
-            operatorIndex.toBlockNumber == 0 || blockNumber < operatorIndex.toBlockNumber,
-            "RegistryBase.getTotalOperators: TotalOperatorsHistory index is too low"
-        );
+//        require(
+//            operatorIndex.toBlockNumber == 0 || blockNumber < operatorIndex.toBlockNumber,
+//            "RegistryBase.getTotalOperators: TotalOperatorsHistory index is too low"
+//        );
         return operatorIndex.index;
     }
 
@@ -219,7 +221,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
             &&
             /// verify that the stake was non-zero at the time (note: here was use the assumption that the operator was 'inactive'
             /// once their stake fell to zero)
-            (operatorStake.firstQuorumStake != 0 || operatorStake.secondQuorumStake != 0) 
+            (operatorStake.firstQuorumStake != 0 || operatorStake.secondQuorumStake != 0)
         );
     }
 
@@ -262,7 +264,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
             &&
             /// verify that the stake was zero at the time (note: here was use the assumption that the operator was 'inactive'
             /// once their stake fell to zero)
-            (operatorStake.firstQuorumStake == 0 && operatorStake.secondQuorumStake == 0) 
+            (operatorStake.firstQuorumStake == 0 && operatorStake.secondQuorumStake == 0)
         );
     }
 

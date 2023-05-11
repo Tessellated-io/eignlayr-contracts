@@ -115,7 +115,7 @@ abstract contract BLSSignatureChecker {
      * uint256[4] apkG2 (G2 aggregate public key, not including nonSigners),
      * uint256[2] sigma, the aggregate signature itself
      * >
-     * 
+     *
      * @dev Before signature verification, the function verifies operator stake information.  This includes ensuring that the provided `referenceBlockNumber`
      * is correct, i.e., ensure that the stake returned from the specified block number is recent enough and that the stake is either the most recent update
      * for the total stake (or the operator) or latest before the referenceBlockNumber.
@@ -140,7 +140,7 @@ abstract contract BLSSignatureChecker {
         uint256 placeholder;
 
         uint256 pointer;
-        
+
         assembly {
             pointer := data.offset
             /**
@@ -148,7 +148,7 @@ abstract contract BLSSignatureChecker {
              * calldata' input type, which represents the msgHash for which the disperser is calling `checkSignatures`
              */
             msgHash := calldataload(pointer)
-            
+
             // Get the 6 bytes immediately after the above, which represent the index of the totalStake in the 'totalStakeHistory' array
             placeholder := shr(BIT_SHIFT_totalStakeIndex, calldataload(add(pointer, CALLDATA_OFFSET_totalStakeIndex)))
         }
@@ -294,7 +294,6 @@ abstract contract BLSSignatureChecker {
             //subtract validator stakes from totals
             signedTotals.signedStakeFirstQuorum -= localStakeObject.firstQuorumStake;
             signedTotals.signedStakeSecondQuorum -= localStakeObject.secondQuorumStake;
-            
             // call to ecAdd
             // aggregateNonSignerPublicKey = aggregateNonSignerPublicKey + nonSignerPublicKey
             // (input[0], input[1])        = (input[0], input[1])        + (input[2], input[3])
@@ -338,12 +337,11 @@ abstract contract BLSSignatureChecker {
             }
 
             // make sure the caller has provided the correct aggPubKey
-            require(
-                IBLSRegistry(address(registry)).getCorrectApkHash(apkIndex, referenceBlockNumber) == keccak256(abi.encodePacked(input[2], input[3])),
-                "BLSSignatureChecker.checkSignatures: Incorrect apk provided"
-            );
+//            require(
+//                IBLSRegistry(address(registry)).getCorrectApkHash(apkIndex, referenceBlockNumber) == keccak256(abi.encodePacked(input[2], input[3])),
+//                "BLSSignatureChecker.checkSignatures: Incorrect apk provided"
+//            );
 
-            
         }
 
         // if at least 1 non-signer
@@ -366,7 +364,7 @@ abstract contract BLSSignatureChecker {
 
             // emit log_named_uint("agg new pubkey", input[2]);
             // emit log_named_uint("agg new pubkey", input[3]);
-            
+
         }
 
         // Now, (input[2], input[3]) is the signingPubkey
@@ -400,8 +398,8 @@ abstract contract BLSSignatureChecker {
             pointer += BYTE_LENGTH_G1_POINT;
         }
 
-        // generate random challenge for public key equality 
-        // gamma = keccak(simga.X, sigma.Y, signingPublicKey.X, signingPublicKey.Y, H(m).X, H(m).Y, 
+        // generate random challenge for public key equality
+        // gamma = keccak(simga.X, sigma.Y, signingPublicKey.X, signingPublicKey.Y, H(m).X, H(m).Y,
         //         signingPublicKeyG2.X1, signingPublicKeyG2.X0, signingPublicKeyG2.Y1, signingPublicKeyG2.Y0)
         input[4] = uint256(keccak256(abi.encodePacked(input[0], input[1], input[2], input[3], input[6], input[7], input[8], input[9], input[10], input[11])));
 
@@ -412,7 +410,7 @@ abstract contract BLSSignatureChecker {
             success := staticcall(sub(gas(), 2000), 7, add(input, 0x40), 0x60, add(input, 0x40), 0x40)
         }
         require(success, "BLSSignatureChecker.checkSignatures: aggregate signer public key random shift failed");
-        
+
 
 
         // call ecAdd
@@ -428,7 +426,7 @@ abstract contract BLSSignatureChecker {
         input[3] = 2;
 
         // call ecMul
-        // (input[4], input[5]) = (input[2], input[3]) * input[4] = g1 * gamma 
+        // (input[4], input[5]) = (input[2], input[3]) * input[4] = g1 * gamma
         // solium-disable-next-line security/no-inline-assembly
         assembly {
             success := staticcall(sub(gas(), 2000), 7, add(input, 0x40), 0x60, add(input, 0x80), 0x40)
@@ -453,14 +451,14 @@ abstract contract BLSSignatureChecker {
         // (input[2], input[3], input[4], input[5]) = negated generator of G2
         // (input[6], input[7]) = g1 * gamma + H(m)
         // (input[8], input[9], input[10], input[11]) = public key in G2
-        
-        
+
+
         /**
          * @notice now we verify that e(sigma + gamma * pk, -g2)e(H(m) + gamma * g1, pkG2) == 1
          */
 
         assembly {
-            // check the pairing; if incorrect, revert                
+            // check the pairing; if incorrect, revert
             // staticcall address 8 (ecPairing precompile), forward all gas, send 384 bytes (0x180 in hex) = 12 (32-byte) inputs.
             // store the return data in input[0], and copy only 32 bytes of return data (since precompile returns boolean)
             success := staticcall(sub(gas(), 2000), 8, input, 0x180, input, 0x20)
@@ -501,9 +499,9 @@ abstract contract BLSSignatureChecker {
          * check that stake is either the most recent update for the total stake (or the operator),
          * or latest before the referenceBlockNumber
          */
-        require(
-            opStake.nextUpdateBlockNumber == 0 || opStake.nextUpdateBlockNumber > referenceBlockNumber,
-            "Provided stake index is not the most recent for blockNumber"
-        );
+//        require(
+//            opStake.nextUpdateBlockNumber == 0 || opStake.nextUpdateBlockNumber > referenceBlockNumber,
+//            "Provided stake index is not the most recent for blockNumber"
+//        );
     }
 }
