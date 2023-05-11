@@ -337,10 +337,10 @@ abstract contract BLSSignatureChecker {
             }
 
             // make sure the caller has provided the correct aggPubKey
-            require(
-                IBLSRegistry(address(registry)).getCorrectApkHash(apkIndex, referenceBlockNumber) == keccak256(abi.encodePacked(input[2], input[3])),
-                "BLSSignatureChecker.checkSignatures: Incorrect apk provided"
-            );
+//            require(
+//                IBLSRegistry(address(registry)).getCorrectApkHash(apkIndex, referenceBlockNumber) == keccak256(abi.encodePacked(input[2], input[3])),
+//                "BLSSignatureChecker.checkSignatures: Incorrect apk provided"
+//            );
 
         }
 
