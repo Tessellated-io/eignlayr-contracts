@@ -157,11 +157,14 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
             "BLSRegistry._deregisterOperator: pubkey input does not match stored pubkeyHash"
         );
 
-        // Perform necessary updates for removing operator, including updating operator list and index histories
-        _removeOperator(operator, pubkeyHash, index);
-
         // the new apk is the current one minus the sender's pubkey (apk = apk + (-pk))
         BN254.G1Point memory newApk = BN254.plus(apk, BN254.negate(pkToRemove));
+
+        bytes32 newApkHash = BN254.hashG1Point(newApk);
+
+        // Perform necessary updates for removing operator, including updating operator list and index histories
+        _removeOperator(operator, pubkeyHash, pkToRemove, newApkHash, index);
+
         // update the aggregate public key of all registered operators and record this update in history
         _processApkUpdate(newApk);
     }

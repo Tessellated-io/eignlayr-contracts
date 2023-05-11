@@ -6,6 +6,7 @@ import "../interfaces/IServiceManager.sol";
 import "../interfaces/IQuorumRegistry.sol";
 import "../libraries/BytesLib.sol";
 import "./VoteWeigherBase.sol";
+import "../libraries/BN254.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -63,7 +64,12 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
      * @notice Emitted whenever an operator deregisters.
      * The `swapped` address is the address returned by an internal call to the `_popRegistrant` function.
      */
-    event Deregistration(address operator, address swapped);
+    event Deregistration(
+        address operator,
+        address swapped,
+        BN254.G1Point pk,
+        bytes32 apkHash
+    );
 
     /**
      * @notice Irrevocably sets the (immutable) `delegation` & `investmentManager` addresses, and `NUMBER_OF_QUORUMS` variable.
@@ -149,9 +155,6 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
         );
 
         OperatorIndex memory operatorIndex = totalOperatorsHistory[index];
-        console.log("============index================%d", index);
-        console.log("============operatorIndex.toBlockNumber================%d", operatorIndex.toBlockNumber);
-        console.log("============blockNumber================%d", blockNumber);
         // since the 'to' field represents the blockNumber at which a new index started, we want to check strict inequality here
 
 //        require(
@@ -390,7 +393,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
      * @notice Remove the operator from active status. Removes the operator with the given `pubkeyHash` from the `index` in `operatorList`,
      * updates operatorList and index histories, and performs other necessary updates for removing operator
      */
-    function _removeOperator(address operator, bytes32 pubkeyHash, uint32 index) internal virtual {
+    function _removeOperator(address operator, bytes32 pubkeyHash, BN254.G1Point memory pk, bytes32 apkHash, uint32 index) internal virtual {
         // remove the operator's stake
         uint32 updateBlockNumber = _removeOperatorStake(pubkeyHash);
 
@@ -410,7 +413,7 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
         serviceManager.recordLastStakeUpdateAndRevokeSlashingAbility(operator, latestTime);
 
         // Emit `Deregistration` event
-        emit Deregistration(operator, swappedOperator);
+        emit Deregistration(operator, swappedOperator, pk, apkHash);
 
         emit StakeUpdate(
             operator,
