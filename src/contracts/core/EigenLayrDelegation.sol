@@ -47,15 +47,15 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     // EXTERNAL FUNCTIONS
     /**
      * @notice This will be called by an operator to register itself as an operator that stakers can choose to delegate to.
-     * @param  rewardReciveAddress another EOA address for receive from mantle network
+     * @param  rewardReceiveAddress another EOA address for receive from mantle network
      */
-    function registerAsOperator(address rewardReciveAddress) external {
+    function registerAsOperator(address rewardReceiveAddress) external {
         require(
-            rewardReciveAddress == address(0),
+            operatorReceiverRewardAddress[msg.sender] == address(0),
             "EigenLayrDelegation.registerAsOperator: operator has already registered"
         );
         // store the address of the delegation contract that the operator is providing.
-        operatorReceiverRewardAddress[msg.sender] = rewardReciveAddress;
+        operatorReceiverRewardAddress[msg.sender] = rewardReceiveAddress;
         _delegate(msg.sender, msg.sender);
     }
 
