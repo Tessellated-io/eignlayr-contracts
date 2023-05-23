@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "../interfaces/IInvestmentManager.sol";
-import "../interfaces/IDelegationTerms.sol";
 import "../interfaces/IEigenLayrDelegation.sol";
 import "../interfaces/ISlasher.sol";
 
@@ -35,8 +34,8 @@ abstract contract EigenLayrDelegationStorage is IEigenLayrDelegation {
     // operator => investment strategy => total number of shares delegated to them
     mapping(address => mapping(IInvestmentStrategy => uint256)) public operatorShares;
 
-    // operator => delegation terms contract
-    mapping(address => IDelegationTerms) public delegationTerms;
+    // operator => receive reward address
+    mapping(address => address) public operatorReceiverRewardAddress;
 
     // staker => operator
     mapping(address => address) public delegatedTo;

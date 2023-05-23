@@ -15,7 +15,7 @@ import "./Slasher.sol";
  * @author Layr Labs, Inc.
  * @notice  This is the contract for delegation in EigenLayr. The main functionalities of this contract are
  * - enabling anyone to register as an operator in EigenLayr
- * - allowing new operators to provide a DelegationTerms-type contract, which may mediate their interactions with stakers who delegate to them
+ * - allowing new operators to provide a another eoa address, which may mediate their interactions with stakers who delegate to them
  * - enabling any staker to delegate its stake to the operator of its choice
  * - enabling a staker to undelegate its assets from an operator (performed as part of the withdrawal process, initiated through the InvestmentManager)
  */
@@ -29,17 +29,11 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     }
 
     // INITIALIZING FUNCTIONS
-    constructor(IInvestmentManager _investmentManager, ISlasher _slasher) 
+    constructor(IInvestmentManager _investmentManager, ISlasher _slasher)
         EigenLayrDelegationStorage(_investmentManager, _slasher)
     {
         _disableInitializers();
     }
-
-    /// @dev Emitted when a low-level call to `delegationTerms.onDelegationReceived` fails, returning `returnData`
-    event OnDelegationReceivedCallFailure(IDelegationTerms indexed delegationTerms, bytes32 returnData);
-
-    /// @dev Emitted when a low-level call to `delegationTerms.onDelegationWithdrawn` fails, returning `returnData`
-    event OnDelegationWithdrawnCallFailure(IDelegationTerms indexed delegationTerms, bytes32 returnData);
 
     function initialize(IPauserRegistry _pauserRegistry, address initialOwner)
         external
@@ -53,18 +47,15 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     // EXTERNAL FUNCTIONS
     /**
      * @notice This will be called by an operator to register itself as an operator that stakers can choose to delegate to.
-     * @param dt is the `DelegationTerms` contract that the operator has for those who delegate to them.
-     * @dev An operator can set `dt` equal to their own address (or another EOA address), in the event that they want to split payments
-     * in a more 'trustful' manner.
-     * @dev In the present design, once set, there is no way for an operator to ever modify the address of their DelegationTerms contract.
+     * @param  rewardReciveAddress another EOA address for receive from mantle network
      */
-    function registerAsOperator(IDelegationTerms dt) external {
+    function registerAsOperator(address rewardReciveAddress) external {
         require(
-            address(delegationTerms[msg.sender]) == address(0),
+            rewardReciveAddress == address(0),
             "EigenLayrDelegation.registerAsOperator: operator has already registered"
         );
         // store the address of the delegation contract that the operator is providing.
-        delegationTerms[msg.sender] = dt;
+        operatorReceiverRewardAddress[msg.sender] = rewardReciveAddress;
         _delegate(msg.sender, msg.sender);
     }
 
@@ -105,6 +96,11 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
         delegatedTo[staker] = address(0);
     }
 
+    /// @notice returns the eoa address of the `operator`, which may mediate their interactions with stakers who delegate to them.
+    function getOperatorRewardAddress(address operator) external view returns (address){
+        return operatorReceiverRewardAddress[operator];
+    }
+
     /**
      * @notice Increases the `staker`'s delegated shares in `strategy` by `shares, typically called when the staker has further deposits into EigenLayr
      * @dev Callable only by the InvestmentManager
@@ -120,15 +116,10 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
             // add strategy shares to delegate's shares
             operatorShares[operator][strategy] += shares;
 
-            //Calls into operator's delegationTerms contract to update weights of individual staker
             IInvestmentStrategy[] memory investorStrats = new IInvestmentStrategy[](1);
             uint256[] memory investorShares = new uint[](1);
             investorStrats[0] = strategy;
             investorShares[0] = shares;
-
-            // call into hook in delegationTerms contract
-            IDelegationTerms dt = delegationTerms[operator];
-            _delegationReceivedHook(dt, staker, investorStrats, investorShares);
         }
     }
 
@@ -146,7 +137,6 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     {
         if (isDelegated(staker)) {
             address operator = delegatedTo[staker];
-
             // subtract strategy shares from delegate's shares
             uint256 stratsLength = strategies.length;
             for (uint256 i = 0; i < stratsLength;) {
@@ -155,108 +145,6 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
                     ++i;
                 }
             }
-
-            // call into hook in delegationTerms contract
-            IDelegationTerms dt = delegationTerms[operator];
-            _delegationWithdrawnHook(dt, staker, strategies, shares);
-        }
-    }
-
-    // INTERNAL FUNCTIONS
-
-    /** 
-     * @notice Makes a low-level call to `dt.onDelegationReceived(staker, strategies, shares)`, ignoring reverts and with a gas budget 
-     * equal to `LOW_LEVEL_GAS_BUDGET` (a constant defined in this contract).
-     * @dev *If* the low-level call fails, then this function emits the event `OnDelegationReceivedCallFailure(dt, returnData)`, where
-     * `returnData` is *only the first 32 bytes* returned by the call to `dt`.
-     */
-    function _delegationReceivedHook(
-        IDelegationTerms dt,
-        address staker,
-        IInvestmentStrategy[] memory strategies,
-        uint256[] memory shares
-    )
-        internal
-    {
-        /**
-         * We use low-level call functionality here to ensure that an operator cannot maliciously make this function fail in order to prevent undelegation.
-         * In particular, in-line assembly is also used to prevent the copying of uncapped return data which is also a potential DoS vector.
-         */
-        // format calldata
-        bytes memory lowLevelCalldata = abi.encodeWithSelector(IDelegationTerms.onDelegationReceived.selector, staker, strategies, shares);
-        // Prepare memory for low-level call return data. We accept a max return data length of 32 bytes
-        bool success;
-        bytes32[1] memory returnData;
-        // actually make the call
-        assembly {
-            success := call(
-                // gas provided to this context
-                LOW_LEVEL_GAS_BUDGET,
-                // address to call
-                dt,
-                // value in wei for call
-                0,
-                // memory location to copy for calldata
-                lowLevelCalldata,
-                // length of memory to copy for calldata
-                mload(lowLevelCalldata),
-                // memory location to copy return data
-                returnData,
-                // byte size of return data to copy to memory
-                32
-            )
-        }
-        // if the call fails, we emit a special event rather than reverting
-        if (!success) {
-            emit OnDelegationReceivedCallFailure(dt, returnData[0]);
-        }
-    }
-
-    /** 
-     * @notice Makes a low-level call to `dt.onDelegationWithdrawn(staker, strategies, shares)`, ignoring reverts and with a gas budget 
-     * equal to `LOW_LEVEL_GAS_BUDGET` (a constant defined in this contract).
-     * @dev *If* the low-level call fails, then this function emits the event `OnDelegationReceivedCallFailure(dt, returnData)`, where
-     * `returnData` is *only the first 32 bytes* returned by the call to `dt`.
-     */
-    function _delegationWithdrawnHook(
-        IDelegationTerms dt,
-        address staker,
-        IInvestmentStrategy[] memory strategies,
-        uint256[] memory shares
-    )
-        internal
-    {
-        /**
-         * We use low-level call functionality here to ensure that an operator cannot maliciously make this function fail in order to prevent undelegation.
-         * In particular, in-line assembly is also used to prevent the copying of uncapped return data which is also a potential DoS vector.
-         */
-        // format calldata
-        bytes memory lowLevelCalldata = abi.encodeWithSelector(IDelegationTerms.onDelegationWithdrawn.selector, staker, strategies, shares);
-        // Prepare memory for low-level call return data. We accept a max return data length of 32 bytes
-        bool success;
-        bytes32[1] memory returnData;
-        // actually make the call
-        assembly {
-            success := call(
-                // gas provided to this context
-                LOW_LEVEL_GAS_BUDGET,
-                // address to call
-                dt,
-                // value in wei for call
-                0,
-                // memory location to copy for calldata
-                lowLevelCalldata,
-                // length of memory to copy for calldata
-                mload(lowLevelCalldata),
-                // memory location to copy return data
-                returnData,
-                // byte size of return data to copy to memory
-                32
-            )
-        }
-        // if the call fails, we emit a special event rather than reverting
-        if (!success) {
-            emit OnDelegationWithdrawnCallFailure(dt, returnData[0]);
         }
     }
 
@@ -266,11 +154,11 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
      * @param operator The address to delegate *to* -- this address is being given power to place the `staker`'s assets at risk on services
      * @dev Ensures that the operator has registered as a delegate (`address(dt) != address(0)`), verifies that `staker` is not already
      * delegated, and records the new delegation.
-     */ 
+     */
     function _delegate(address staker, address operator) internal onlyWhenNotPaused(PAUSED_NEW_DELEGATION) {
-        IDelegationTerms dt = delegationTerms[operator];
+        address rewardAddress = operatorReceiverRewardAddress[operator];
         require(
-            address(dt) != address(0), "EigenLayrDelegation._delegate: operator has not yet registered as a delegate"
+            rewardAddress != address(0), "EigenLayrDelegation._delegate: operator has not yet registered as a delegate"
         );
 
         require(isNotDelegated(staker), "EigenLayrDelegation._delegate: staker has existing delegation");
@@ -292,13 +180,9 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
                 ++i;
             }
         }
-
-        // call into hook in delegationTerms contract
-        _delegationReceivedHook(dt, staker, strategies, shares);
     }
 
     // VIEW FUNCTIONS
-
     /// @notice Returns 'true' if `staker` *is* actively delegated, and 'false' otherwise.
     function isDelegated(address staker) public view returns (bool) {
         return (delegatedTo[staker] != address(0));
@@ -311,6 +195,6 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
 
     /// @notice Returns if an operator can be delegated to, i.e. it has called `registerAsOperator`.
     function isOperator(address operator) public view returns (bool) {
-        return (address(delegationTerms[operator]) != address(0));
+        return operatorReceiverRewardAddress[operator] != address(0);
     }
 }

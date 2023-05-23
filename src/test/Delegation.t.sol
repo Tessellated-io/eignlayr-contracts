@@ -79,7 +79,7 @@ contract DelegationTests is EigenLayrTestHelper {
     function testSelfOperatorDelegate(address sender) public {
         cheats.assume(sender != address(0));
         cheats.assume(sender != address(eigenLayrProxyAdmin));
-        _testRegisterAsOperator(sender, IDelegationTerms(sender));
+        _testRegisterAsOperator(sender, sender);
     }
 
     function testTwoSelfOperatorsRegister() public {
@@ -98,7 +98,7 @@ contract DelegationTests is EigenLayrTestHelper {
         fuzzedAmounts(ethAmount, eigenAmount)
     {
         cheats.assume(staker != operator);
-        
+
         _testDelegation(operator, staker, ethAmount, eigenAmount, voteWeigher);
     }
 
@@ -111,7 +111,7 @@ contract DelegationTests is EigenLayrTestHelper {
         cheats.assume(ethAmount >= 0 && ethAmount <= 1e18);
         cheats.assume(eigenAmount >= 0 && eigenAmount <= 1e18);
         if (!delegation.isOperator(operator)) {
-            _testRegisterAsOperator(operator, IDelegationTerms(operator));
+            _testRegisterAsOperator(operator, operator);
         }
         address staker = cheats.addr(PRIVATE_KEY);
         cheats.assume(staker != operator);
@@ -120,7 +120,7 @@ contract DelegationTests is EigenLayrTestHelper {
         assertTrue(delegation.isNotDelegated(staker) == true, "testDelegation: staker is not delegate");
         _testDepositWeth(staker, ethAmount);
         _testDepositEigen(staker, eigenAmount);
-        
+
 
         uint256 nonceBefore = delegation.nonces(staker);
 
@@ -131,7 +131,7 @@ contract DelegationTests is EigenLayrTestHelper {
         (uint8 v, bytes32 r, bytes32 s) = cheats.sign(PRIVATE_KEY, digestHash);
 
         bytes32 vs = getVSfromVandS(v, s);
-        
+
         delegation.delegateToBySignature(staker, operator, 0, r, vs);
         assertTrue(delegation.isDelegated(staker) == true, "testDelegation: staker is not delegate");
         assertTrue(nonceBefore + 1 == delegation.nonces(staker), "nonce not incremented correctly");
@@ -141,9 +141,9 @@ contract DelegationTests is EigenLayrTestHelper {
     /// @notice tests delegation to EigenLayr via an ECDSA signatures with invalid signature
     /// @param operator is the operator being delegated to.
     function testDelegateToByInvalidSignature(
-        address operator, 
-        uint256 ethAmount, 
-        uint256 eigenAmount, 
+        address operator,
+        uint256 ethAmount,
+        uint256 eigenAmount,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -153,7 +153,7 @@ contract DelegationTests is EigenLayrTestHelper {
         fuzzedAmounts(ethAmount, eigenAmount)
     {
         if (!delegation.isOperator(operator)) {
-            _testRegisterAsOperator(operator, IDelegationTerms(operator));
+            _testRegisterAsOperator(operator, operator);
         }
         address staker = cheats.addr(PRIVATE_KEY);
         cheats.assume(staker != operator);
@@ -164,9 +164,9 @@ contract DelegationTests is EigenLayrTestHelper {
         _testDepositEigen(staker, eigenAmount);
 
         bytes32 vs = getVSfromVandS(v, s);
-        
+
         cheats.expectRevert();
-        delegation.delegateToBySignature(staker, operator, 0, r, vs);   
+        delegation.delegateToBySignature(staker, operator, 0, r, vs);
     }
 
     /// @notice registers a fixed address as a delegate, delegates to it from a second address,
@@ -183,7 +183,7 @@ contract DelegationTests is EigenLayrTestHelper {
         cheats.assume(numStratsToAdd > 0 && numStratsToAdd <= 20);
         uint96 operatorEthWeightBefore = voteWeigher.weightOfOperator(operator, 0);
         uint96 operatorEigenWeightBefore = voteWeigher.weightOfOperator(operator, 1);
-        _testRegisterAsOperator(operator, IDelegationTerms(operator));
+        _testRegisterAsOperator(operator, operator);
         _testDepositStrategies(staker, 1e18, numStratsToAdd);
 
         // add strategies to voteWeigher
@@ -222,9 +222,9 @@ contract DelegationTests is EigenLayrTestHelper {
     /// @notice This function tests to ensure that a you can't register as a delegate multiple times
     /// @param operator is the operator being delegated to.
     function testRegisterAsOperatorMultipleTimes(address operator) public fuzzedAddress(operator) {
-        _testRegisterAsOperator(operator, IDelegationTerms(operator));
+        _testRegisterAsOperator(operator, operator);
         cheats.expectRevert(bytes("EigenLayrDelegation.registerAsOperator: operator has already registered"));
-        _testRegisterAsOperator(operator, IDelegationTerms(operator));
+        _testRegisterAsOperator(operator, operator);
     }
 
     /// @notice This function tests to ensure that a staker cannot delegate to an unregistered operator
@@ -248,7 +248,7 @@ contract DelegationTests is EigenLayrTestHelper {
         uint256 eigenToDeposit = 1e10;
         _testDepositWeth(sender, wethToDeposit);
         _testDepositEigen(sender, eigenToDeposit);
-        _testRegisterAsOperator(sender, IDelegationTerms(sender));
+        _testRegisterAsOperator(sender, sender);
 
         cheats.startPrank(sender);
 

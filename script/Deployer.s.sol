@@ -11,15 +11,10 @@ import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import "../src/contracts/interfaces/IEigenLayrDelegation.sol";
 import "../src/contracts/core/EigenLayrDelegation.sol";
 
-import "../src/contracts/interfaces/IETHPOSDeposit.sol";
-import "../src/contracts/interfaces/IBeaconChainOracle.sol";
 
 import "../src/contracts/core/InvestmentManager.sol";
 import "../src/contracts/strategies/InvestmentStrategyBase.sol";
 import "../src/contracts/core/Slasher.sol";
-
-import "../src/contracts/pods/EigenPod.sol";
-import "../src/contracts/pods/EigenPodManager.sol";
 
 import "../src/contracts/permissions/PauserRegistry.sol";
 import "../src/contracts/middleware/BLSPublicKeyCompendium.sol";
@@ -27,8 +22,6 @@ import "../src/contracts/middleware/BLSPublicKeyCompendium.sol";
 import "../src/contracts/libraries/BytesLib.sol";
 
 import "../src/test/mocks/EmptyContract.sol";
-import "../src/test/mocks/BeaconChainOracleMock.sol";
-import "../src/test/mocks/ETHDepositMock.sol";
 
 import "forge-std/Test.sol";
 
@@ -58,12 +51,7 @@ contract EigenLayrDeployer is Script, DSTest {
     PauserRegistry public eigenLayrPauserReg;
     Slasher public slasher;
     EigenLayrDelegation public delegation;
-    EigenPodManager public eigenPodManager;
     InvestmentManager public investmentManager;
-    IEigenPod public pod;
-    IETHPOSDeposit public ethPOSDeposit;
-    IBeacon public eigenPodBeacon;
-    IBeaconChainOracle public beaconChainOracle;
 
     // DataLayr contracts
     ProxyAdmin public dataLayrProxyAdmin;
@@ -135,23 +123,12 @@ contract EigenLayrDeployer is Script, DSTest {
         slasher = Slasher(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
-        eigenPodManager = EigenPodManager(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
-        );
 
-        beaconChainOracle = new BeaconChainOracleMock();
-        beaconChainOracle.setBeaconChainStateRoot(0xb08d5a1454de19ac44d523962096d73b85542f81822c5e25b8634e4e86235413);
-
-        ethPOSDeposit = new ETHPOSDepositMock();
-        pod = new EigenPod(ethPOSDeposit, PARTIAL_WITHDRAWAL_FRAUD_PROOF_PERIOD, REQUIRED_BALANCE_WEI, MAX_PARTIAL_WTIHDRAWAL_AMOUNT_GWEI);
-
-        eigenPodBeacon = new UpgradeableBeacon(address(pod));
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, eigenPodManager, slasher);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
-        EigenPodManager eigenPodManagerImplementation = new EigenPodManager(ethPOSDeposit, eigenPodBeacon, investmentManager, slasher);
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
         eigenLayrProxyAdmin.upgradeAndCall(
@@ -169,12 +146,6 @@ contract EigenLayrDeployer is Script, DSTest {
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(eigenPodManager))),
-            address(eigenPodManagerImplementation),
-            abi.encodeWithSelector(EigenPodManager.initialize.selector, beaconChainOracle, eigenLayrReputedMultisig)
-        );
-
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy
         weth = new ERC20PresetFixedSupply(
@@ -196,13 +167,6 @@ contract EigenLayrDeployer is Script, DSTest {
             )
         );
 
-//        eigenToken = new ERC20PresetFixedSupply(
-//            "eigen",
-//            "EIGEN",
-//            wethInitialSupply,
-//            msg.sender
-//        );
-
         string memory bitAddrStr = vm.envString("L1_BIT_ADDRESS");
         if(bytes(bitAddrStr).length == 42) { // "0x...." string is 42 char long
             address bitAddr = vm.envAddress("L1_BIT_ADDRESS");
@@ -219,7 +183,7 @@ contract EigenLayrDeployer is Script, DSTest {
                 )
             )
         );
-        
+
         vm.writeFile("data/investmentManager.addr", vm.toString(address(investmentManager)));
         vm.writeFile("data/delegation.addr", vm.toString(address(delegation)));
         vm.writeFile("data/slasher.addr", vm.toString(address(slasher)));

@@ -11,16 +11,11 @@ import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import "../contracts/interfaces/IEigenLayrDelegation.sol";
 import "../contracts/core/EigenLayrDelegation.sol";
 
-import "../contracts/interfaces/IETHPOSDeposit.sol";
-import "../contracts/interfaces/IBeaconChainOracle.sol";
 import "../contracts/interfaces/IVoteWeigher.sol";
 
 import "../contracts/core/InvestmentManager.sol";
 import "../contracts/strategies/InvestmentStrategyBase.sol";
 import "../contracts/core/Slasher.sol";
-
-import "../contracts/pods/EigenPod.sol";
-import "../contracts/pods/EigenPodManager.sol";
 
 import "../contracts/permissions/PauserRegistry.sol";
 
@@ -30,8 +25,7 @@ import "./utils/Operators.sol";
 
 import "./mocks/LiquidStakingToken.sol";
 import "./mocks/EmptyContract.sol";
-import "./mocks/BeaconChainOracleMock.sol";
-import "./mocks/ETHDepositMock.sol";
+
 
  import "forge-std/Test.sol";
 
@@ -47,11 +41,6 @@ contract EigenLayrDeployer is Operators {
     Slasher public slasher;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
-    IEigenPodManager public eigenPodManager;
-    IEigenPod public pod;
-    IETHPOSDeposit public ethPOSDeposit;
-    IBeacon public eigenPodBeacon;
-    IBeaconChainOracle public beaconChainOracle;
 
     // testing/mock contracts
     IERC20 public eigenToken;
@@ -110,7 +99,6 @@ contract EigenLayrDeployer is Operators {
         fuzzedAddressMapping[address(0)] = true;
         fuzzedAddressMapping[address(eigenLayrProxyAdmin)] = true;
         fuzzedAddressMapping[address(investmentManager)] = true;
-        fuzzedAddressMapping[address(eigenPodManager)] = true;
         fuzzedAddressMapping[address(delegation)] = true;
         fuzzedAddressMapping[address(slasher)] = true;
     }
@@ -136,24 +124,15 @@ contract EigenLayrDeployer is Operators {
         slasher = Slasher(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
-        eigenPodManager = EigenPodManager(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
-        );
 
-        beaconChainOracle = new BeaconChainOracleMock();
-        beaconChainOracle.setBeaconChainStateRoot(0xb08d5a1454de19ac44d523962096d73b85542f81822c5e25b8634e4e86235413);
 
-        ethPOSDeposit = new ETHPOSDepositMock();
-        pod = new EigenPod(ethPOSDeposit, PARTIAL_WITHDRAWAL_FRAUD_PROOF_PERIOD_BLOCKS, REQUIRED_BALANCE_WEI, MAX_PARTIAL_WTIHDRAWAL_AMOUNT_GWEI);
 
-        eigenPodBeacon = new UpgradeableBeacon(address(pod));
+
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, eigenPodManager, slasher);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
-        EigenPodManager eigenPodManagerImplementation = new EigenPodManager(ethPOSDeposit, eigenPodBeacon, investmentManager, slasher);
-
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
         eigenLayrProxyAdmin.upgradeAndCall(
@@ -171,12 +150,6 @@ contract EigenLayrDeployer is Operators {
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(eigenPodManager))),
-            address(eigenPodManagerImplementation),
-            abi.encodeWithSelector(EigenPodManager.initialize.selector, beaconChainOracle, eigenLayrReputedMultisig)
-        );
-
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy
         weth = new ERC20PresetFixedSupply(

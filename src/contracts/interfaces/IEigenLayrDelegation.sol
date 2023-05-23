@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./IDelegationTerms.sol";
+import "./IInvestmentStrategy.sol";
 
 /**
  * @title The interface for the primary delegation contract for EigenLayr.
@@ -16,12 +16,9 @@ interface IEigenLayrDelegation {
 
     /**
      * @notice This will be called by an operator to register itself as an operator that stakers can choose to delegate to.
-     * @param dt is the `DelegationTerms` contract that the operator has for those who delegate to them.
-     * @dev An operator can set `dt` equal to their own address (or another EOA address), in the event that they want to split payments
-     * in a more 'trustful' manner.
-     * @dev In the present design, once set, there is no way for an operator to ever modify the address of their DelegationTerms contract.
+     * @param rewardReciveAddress another EOA address for receive from mantle network
      */
-    function registerAsOperator(IDelegationTerms dt) external;
+    function registerAsOperator(address rewardReciveAddress) external;
 
     /**
      *  @notice This will be called by a staker to delegate its assets to some operator.
@@ -45,8 +42,8 @@ interface IEigenLayrDelegation {
     /// @notice returns the address of the operator that `staker` is delegated to.
     function delegatedTo(address staker) external view returns (address);
 
-    /// @notice returns the DelegationTerms of the `operator`, which may mediate their interactions with stakers who delegate to them.
-    function delegationTerms(address operator) external view returns (IDelegationTerms);
+    /// @notice returns the eoa address of the `operator`, which may mediate their interactions with stakers who delegate to them.
+    function getOperatorRewardAddress(address operator) external view returns (address);
 
     /// @notice returns the total number of shares in `strategy` that are delegated to `operator`.
     function operatorShares(address operator, IInvestmentStrategy strategy) external view returns (uint256);

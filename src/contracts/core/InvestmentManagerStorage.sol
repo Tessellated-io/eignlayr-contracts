@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "../interfaces/IInvestmentManager.sol";
 import "../interfaces/IInvestmentStrategy.sol";
-import "../interfaces/IEigenPodManager.sol";
 import "../interfaces/IEigenLayrDelegation.sol";
 import "../interfaces/ISlasher.sol";
 
@@ -30,7 +29,6 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
 
     // system contracts
     IEigenLayrDelegation public immutable delegation;
-    IEigenPodManager public immutable eigenPodManager;
     ISlasher public immutable slasher;
 
     // staker => InvestmentStrategy => number of shares which they currently hold
@@ -42,11 +40,8 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
     // staker => cumulative number of queued withdrawals they have ever initiated. only increments (doesn't decrement)
     mapping(address => uint256) public numWithdrawalsQueued;
 
-    IInvestmentStrategy public constant beaconChainETHStrategy = IInvestmentStrategy(0xbeaC0eeEeeeeEEeEeEEEEeeEEeEeeeEeeEEBEaC0);
-
-    constructor(IEigenLayrDelegation _delegation, IEigenPodManager _eigenPodManager, ISlasher _slasher) {
+    constructor(IEigenLayrDelegation _delegation, ISlasher _slasher) {
         delegation = _delegation;
-        eigenPodManager = _eigenPodManager;
         slasher = _slasher;
     }
 }

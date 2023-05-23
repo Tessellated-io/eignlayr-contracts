@@ -8,6 +8,6 @@ contract BecomeOperator is Script, DSTest, EigenLayerParser {
     function run() external {
         parseEigenLayerParams();
         vm.broadcast(msg.sender);
-        delegation.registerAsOperator(IDelegationTerms(msg.sender));
+        delegation.registerAsOperator(msg.sender);
     }
 }

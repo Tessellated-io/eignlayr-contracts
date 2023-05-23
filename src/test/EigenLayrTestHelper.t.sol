@@ -19,16 +19,16 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
 
     function _testInitiateDelegation(
         uint8 operatorIndex,
-        uint256 amountEigenToDeposit, 
-        uint256 amountEthToDeposit        
+        uint256 amountEigenToDeposit,
+        uint256 amountEthToDeposit
     )
         public returns (uint256 amountEthStaked, uint256 amountEigenStaked)
     {
 
         address operator = getOperatorAddress(operatorIndex);
-    
+
         //setting up operator's delegation terms
-        _testRegisterAsOperator(operator, IDelegationTerms(operator));
+        _testRegisterAsOperator(operator, operator);
 
         for (uint256 i; i < stakers.length; i++) {
             //initialize weth, eigen and eth balances for staker
@@ -48,7 +48,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
                 delegation.operatorShares(operator, eigenStrat) - operatorEigenSharesBefore == amountEigenToDeposit
             );
             assertTrue(delegation.operatorShares(operator, wethStrat) - operatorWETHSharesBefore == amountEthToDeposit);
-            
+
         }
         amountEthStaked += delegation.operatorShares(operator, wethStrat);
         amountEigenStaked += delegation.operatorShares(operator, eigenStrat);
@@ -58,13 +58,13 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
 
     // simply tries to register 'sender' as an operator, setting their 'DelegationTerms' contract in EigenLayrDelegation to 'dt'
     // verifies that the storage of EigenLayrDelegation contract is updated appropriately
-    function _testRegisterAsOperator(address sender, IDelegationTerms dt) internal {
+    function _testRegisterAsOperator(address sender, address rewardAddress) internal {
         cheats.startPrank(sender);
-        delegation.registerAsOperator(dt);
+        delegation.registerAsOperator(rewardAddress);
         assertTrue(delegation.isOperator(sender), "testRegisterAsOperator: sender is not a operator");
 
         assertTrue(
-            delegation.delegationTerms(sender) == dt, "_testRegisterAsOperator: delegationTerms not set appropriately"
+            sender == rewardAddress, "_testRegisterAsOperator: delegationTerms not set appropriately"
         );
 
         assertTrue(delegation.isDelegated(sender), "_testRegisterAsOperator: sender not marked as actively delegated");
@@ -135,7 +135,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
                     "_depositToStrategy: investorStrats array updated incorrectly"
                 );
             }
-            
+
             //in this case, since shares never grow, the shares should just match the deposited amount
             assertEq(
                 investmentManager.investorStratShares(sender, stratToDepositTo) - operatorSharesBefore,
@@ -300,7 +300,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
         // we do this here to ensure that `staker` is delegated if `registerAsOperator` is true
         if (registerAsOperator) {
             assertTrue(!delegation.isDelegated(staker), "_createQueuedWithdrawal: staker is already delegated");
-            _testRegisterAsOperator(staker, IDelegationTerms(staker));
+            _testRegisterAsOperator(staker, staker);
             assertTrue(
                 delegation.isDelegated(staker), "_createQueuedWithdrawal: staker isn't delegated when they should be"
             );
@@ -338,10 +338,10 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
         return (withdrawalRoot, queuedWithdrawal);
     }
 
-    /** 
+    /**
     * combines V and S into VS - if S is greater than SECP256K1N_MODULUS_HALF, then we
     * get the modulus, so that the leading bit of s is always 0.  Then we set the leading
-    * bit to be either 0 or 1 based on the value of v, which is either 27 or 28 
+    * bit to be either 0 or 1 based on the value of v, which is either 27 or 28
     */
     function getVSfromVandS(uint8 v, bytes32 s) internal view returns(bytes32){
         if (uint256(s) > SECP256K1N_MODULUS_HALF) {
@@ -365,7 +365,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
         internal
     {
         if (!delegation.isOperator(operator)) {
-            _testRegisterAsOperator(operator, IDelegationTerms(operator));
+            _testRegisterAsOperator(operator, operator);
         }
 
         uint256[3] memory amountsBefore;
@@ -479,7 +479,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
             priorTotalShares.push(strategyArray[i].totalShares());
             strategyTokenBalance.push(strategyArray[i].underlyingToken().balanceOf(address(strategyArray[i])));
         }
-    
+
         IInvestmentManager.QueuedWithdrawal memory queuedWithdrawal = IInvestmentManager.QueuedWithdrawal({
             strategies: strategyArray,
             tokens: tokensArray,
