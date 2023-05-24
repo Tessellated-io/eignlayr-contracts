@@ -17,7 +17,7 @@ import "../src/contracts/strategies/InvestmentStrategyBase.sol";
 import "../src/contracts/core/Slasher.sol";
 
 import "../src/contracts/permissions/PauserRegistry.sol";
-import "../src/contracts/middleware/BLSPublicKeyCompendium.sol";
+import "../src/contracts/middleware/RegistryPermission.sol";
 
 import "../src/contracts/libraries/BytesLib.sol";
 
@@ -56,6 +56,7 @@ contract EigenLayrDeployer is Script, DSTest {
     // DataLayr contracts
     ProxyAdmin public dataLayrProxyAdmin;
     PauserRegistry public dataLayrPauserReg;
+    RegistryPermission public rgPermission;
 
     // testing/mock contracts
     IERC20 public eigenToken;
@@ -63,6 +64,8 @@ contract EigenLayrDeployer is Script, DSTest {
     InvestmentStrategyBase public wethStrat;
     InvestmentStrategyBase public eigenStrat;
     InvestmentStrategyBase public baseStrategyImplementation;
+    RegistryPermission public rgPermissionImplementation;
+
     EmptyContract public emptyContract;
 
     uint256 nonce = 69;
@@ -123,12 +126,16 @@ contract EigenLayrDeployer is Script, DSTest {
         slasher = Slasher(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
+        rgPermission = RegistryPermission(
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+        );
 
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
-        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher);
+        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
         InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
+        rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
         eigenLayrProxyAdmin.upgradeAndCall(
@@ -145,6 +152,10 @@ contract EigenLayrDeployer is Script, DSTest {
             TransparentUpgradeableProxy(payable(address(slasher))),
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
+        );
+        eigenLayrProxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(address(rgPermission))),
+            address(rgPermissionImplementation)
         );
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy
@@ -192,6 +203,7 @@ contract EigenLayrDeployer is Script, DSTest {
         vm.writeFile("data/eigen.addr", vm.toString(address(eigenToken)));
         vm.writeFile("data/eigenStrat.addr", vm.toString(address(eigenStrat)));
         vm.writeFile("data/eigenStrat.addr", vm.toString(address(eigenStrat)));
+        vm.writeFile("data/rgPermission.addr", vm.toString(address(rgPermission)));
 
         vm.stopBroadcast();
     }

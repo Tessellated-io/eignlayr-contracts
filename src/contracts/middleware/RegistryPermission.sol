@@ -22,14 +22,23 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
     }
 
     function addOperatorPermission(address operator) external {
-        require(msg.sender == permissionPerson, "RegistryPermission.addOperatorPermission: Only permission person can add permission for operator");
+        require(
+            msg.sender == permissionPerson,
+            "RegistryPermission.addOperatorPermission: Only permission person can add permission for operator"
+        );
         operatorPermission[operator] = true;
         emit AddOperatorPermission(operator, true);
     }
 
     function changeOperatorPermission(address operator, bool status) external {
-        require(msg.sender == permissionPerson, "RegistryPermission.ChangeOperatorPermission: Only permission person can change status for operator");
-        require(operatorPermission[operator] != status, "RegistryPermission.ChangeOperatorPermission: Status is same, don't need to change");
+        require(
+            msg.sender == permissionPerson,
+            "RegistryPermission.ChangeOperatorPermission: Only permission person can change status for operator"
+        );
+        require(
+            operatorPermission[operator] != status,
+            "RegistryPermission.ChangeOperatorPermission: Status is same, don't need to change"
+        );
         operatorPermission[operator] = status;
         emit ChangeOperatorPermission(operator, status);
     }

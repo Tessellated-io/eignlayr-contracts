@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./EigenLayrDelegationStorage.sol";
 import "../permissions/Pausable.sol";
 import "./Slasher.sol";
+import "../interfaces/IRegistryPermission.sol";
 
 /**
  * @title The primary delegation contract for EigenLayr.
@@ -22,6 +23,9 @@ import "./Slasher.sol";
 contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDelegationStorage, Pausable {
     uint8 internal constant PAUSED_NEW_DELEGATION = 0;
 
+    /// @notice contract used for manage operator register permission
+    IRegistryPermission public immutable permissionManager;
+
     /// @notice Simple permission for functions that are only callable by the InvestmentManager contract.
     modifier onlyInvestmentManager() {
         require(msg.sender == address(investmentManager), "onlyInvestmentManager");
@@ -29,9 +33,10 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     }
 
     // INITIALIZING FUNCTIONS
-    constructor(IInvestmentManager _investmentManager, ISlasher _slasher)
+    constructor(IInvestmentManager _investmentManager, ISlasher _slasher, IRegistryPermission _permissionManager)
         EigenLayrDelegationStorage(_investmentManager, _slasher)
     {
+        permissionManager = _permissionManager;
         _disableInitializers();
     }
 
@@ -50,6 +55,10 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
      * @param  rewardReceiveAddress another EOA address for receive from mantle network
      */
     function registerAsOperator(address rewardReceiveAddress) external {
+        require(
+            permissionManager.getOperatorPermission(msg.sender) == true,
+            "EigenLayrDelegation.registerAsOperator: Operator does not permission to register as operator"
+        );
         require(
             operatorReceiverRewardAddress[msg.sender] == address(0),
             "EigenLayrDelegation.registerAsOperator: operator has already registered"

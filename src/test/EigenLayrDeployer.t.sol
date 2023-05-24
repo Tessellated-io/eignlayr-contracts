@@ -18,6 +18,7 @@ import "../contracts/strategies/InvestmentStrategyBase.sol";
 import "../contracts/core/Slasher.sol";
 
 import "../contracts/permissions/PauserRegistry.sol";
+import "../contracts/middleware/RegistryPermission.sol";
 
 import "../contracts/libraries/BytesLib.sol";
 
@@ -41,6 +42,7 @@ contract EigenLayrDeployer is Operators {
     Slasher public slasher;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
+    RegistryPermission public rgPermission;
 
     // testing/mock contracts
     IERC20 public eigenToken;
@@ -48,6 +50,7 @@ contract EigenLayrDeployer is Operators {
     InvestmentStrategyBase public wethStrat;
     InvestmentStrategyBase public eigenStrat;
     InvestmentStrategyBase public baseStrategyImplementation;
+    RegistryPermission public rgPermissionImplementation;
     EmptyContract public emptyContract;
 
     mapping(uint256 => IInvestmentStrategy) public strategies;
@@ -124,15 +127,16 @@ contract EigenLayrDeployer is Operators {
         slasher = Slasher(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
-
-
-
+        rgPermission = RegistryPermission(
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+        );
 
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
-        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher);
+        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermissionImplementation);
         InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
+        rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
         eigenLayrProxyAdmin.upgradeAndCall(
@@ -149,6 +153,10 @@ contract EigenLayrDeployer is Operators {
             TransparentUpgradeableProxy(payable(address(slasher))),
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
+        );
+        eigenLayrProxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(address(rgPermission))),
+            address(rgPermissionImplementation)
         );
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy

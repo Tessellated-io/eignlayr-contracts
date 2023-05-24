@@ -41,7 +41,10 @@ contract BLSPublicKeyCompendium is IBLSPublicKeyCompendium, DSTest {
      * @param pubkeyG2 is the G2 with the same private key as the pubkeyG1
      */
     function registerBLSPublicKey(uint256 s, BN254.G1Point memory rPoint, BN254.G1Point memory pubkeyG1, BN254.G2Point memory pubkeyG2) external {
-        require(permissionManager.getOperatorPermission(msg.sender) == true, "BLSPublicKeyCompendium.registerBLSPublicKey: Operator does not permission to register bls public key");
+        require(
+            permissionManager.getOperatorPermission(msg.sender) == true,
+            "BLSPublicKeyCompendium.registerBLSPublicKey: Operator does not permission to register bls public key"
+        );
         // calculate -g1
         BN254.G1Point memory negGeneratorG1 = BN254.negate(BN254.G1Point({X: 1, Y: 2}));
         // verify a Schnorr signature (s, R) of pubkeyG1

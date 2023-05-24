@@ -97,7 +97,10 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
      * @param socket is the socket address of the operator
      */
     function registerOperator(uint8 operatorType, BN254.G1Point memory pk, string calldata socket) external virtual {
-        require(permissionManager.getOperatorPermission(msg.sender) == true, "BLSRegistry.registerOperator: Operator does not permission to register");
+        require(
+            permissionManager.getOperatorPermission(msg.sender) == true,
+            "BLSRegistry.registerOperator: Operator does not permission to register"
+        );
         _registerOperator(msg.sender, operatorType, pk, socket);
     }
 
