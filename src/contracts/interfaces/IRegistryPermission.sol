@@ -8,6 +8,6 @@ pragma solidity ^0.8.9;
  */
 interface IRegistryPermission {
     function addOperatorPermission(address operator) external;
-    function ChangeOperatorPermission(address operator, bool status) external;
-    function getOperatorPermission(address operator) external returns (bool);
+    function changeOperatorPermission(address operator, bool status) external;
+    function getOperatorPermission(address operator) external view returns (bool);
 }

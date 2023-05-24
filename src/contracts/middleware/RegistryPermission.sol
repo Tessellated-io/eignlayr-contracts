@@ -3,9 +3,10 @@ pragma solidity ^0.8.9;
 
 import "../permissions/Pausable.sol";
 import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
 import "../interfaces/IRegistryPermission.sol";
 
-contract RegistryPermission is Initializable, Pausable, IRegistryPermission {
+contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermission {
     mapping(address => bool) public operatorPermission;
     address public permissionPerson;
 
@@ -26,18 +27,18 @@ contract RegistryPermission is Initializable, Pausable, IRegistryPermission {
         emit AddOperatorPermission(operator, true);
     }
 
-    function ChangeOperatorPermission(address operator, bool status) external {
+    function changeOperatorPermission(address operator, bool status) external {
         require(msg.sender == permissionPerson, "RegistryPermission.ChangeOperatorPermission: Only permission person can change status for operator");
         require(operatorPermission[operator] != status, "RegistryPermission.ChangeOperatorPermission: Status is same, don't need to change");
         operatorPermission[operator] = status;
         emit ChangeOperatorPermission(operator, status);
     }
 
-    function getOperatorPermission(address operator) external returns (bool) {
+    function getOperatorPermission(address operator) external view returns (bool) {
         return operatorPermission[operator];
     }
 
-    function setPermissionPerson(address personAddress) onlyOwner {
+    function setPermissionPerson(address personAddress) external onlyOwner {
         permissionPerson = personAddress;
     }
 }
