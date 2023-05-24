@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "../interfaces/IBLSPublicKeyCompendium.sol";
 import "../libraries/BN254.sol";
 import "forge-std/Test.sol";
+import "../interfaces/IRegistryPermission.sol";
 
 /**
  * @title A shared contract for EigenLayer operators to register their BLS public keys.
@@ -18,9 +19,19 @@ contract BLSPublicKeyCompendium is IBLSPublicKeyCompendium, DSTest {
     /// @notice mapping from pubkey hash to operator address
     mapping(bytes32 => address) public pubkeyHashToOperator;
 
+    /// @notice contract used for manage operator register permission
+    IRegistryPermission public immutable permissionManager;
+
     // EVENTS
     /// @notice Emitted when `operator` registers with the public key `pk`.
     event NewPubkeyRegistration(address operator, BN254.G1Point pubkeyG1, BN254.G2Point pubkeyG2);
+
+    constructor(
+        IRegistryPermission _permissionManager
+    )
+    {
+        permissionManager = _permissionManager;
+    }
 
     /**
      * @notice Called by an operator to register themselves as the owner of a BLS public key and reveal their G1 and G2 public key.
@@ -30,12 +41,13 @@ contract BLSPublicKeyCompendium is IBLSPublicKeyCompendium, DSTest {
      * @param pubkeyG2 is the G2 with the same private key as the pubkeyG1
      */
     function registerBLSPublicKey(uint256 s, BN254.G1Point memory rPoint, BN254.G1Point memory pubkeyG1, BN254.G2Point memory pubkeyG2) external {
+        require(permissionManager.getOperatorPermission(msg.sender) == true, "BLSPublicKeyCompendium.registerBLSPublicKey: Operator does not permission to register bls public key");
         // calculate -g1
         BN254.G1Point memory negGeneratorG1 = BN254.negate(BN254.G1Point({X: 1, Y: 2}));
         // verify a Schnorr signature (s, R) of pubkeyG1
         // calculate s*-g1 + (R + H(msg.sender, P, R)*P) = 0
         // which is the Schnorr signature verification equation
-        BN254.G1Point memory shouldBeZero = 
+        BN254.G1Point memory shouldBeZero =
             BN254.plus(
                 BN254.scalar_mul(negGeneratorG1, s),
                 BN254.plus(

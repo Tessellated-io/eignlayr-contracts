@@ -5,6 +5,7 @@ import "./RegistryBase.sol";
 import "../interfaces/IBLSPublicKeyCompendium.sol";
 import "../interfaces/IBLSRegistry.sol";
 import "../libraries/BN254.sol";
+import "../interfaces/IRegistryPermission.sol";
 
 /**
  * @title A Registry-type contract using aggregate BLS signatures.
@@ -22,6 +23,9 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
 
     /// @notice contract used for looking up operators' BLS public keys
     IBLSPublicKeyCompendium public immutable pubkeyCompendium;
+
+    /// @notice contract used for manage operator register permission
+    IRegistryPermission public immutable permissionManager;
 
     /**
      * @notice list of keccak256(apk_x, apk_y) of operators, and the block numbers at which the aggregate
@@ -57,7 +61,8 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
         IInvestmentManager _investmentManager,
         IServiceManager _serviceManager,
         uint8 _NUMBER_OF_QUORUMS,
-        IBLSPublicKeyCompendium _pubkeyCompendium
+        IBLSPublicKeyCompendium _pubkeyCompendium,
+        IRegistryPermission _permissionManager
     )
         RegistryBase(
             _investmentManager,
@@ -67,6 +72,7 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
     {
         //set compendium
         pubkeyCompendium = _pubkeyCompendium;
+        permissionManager = _permissionManager;
     }
 
     /// @notice Initialize the APK, the payment split between quorums, and the quorum strategies + multipliers.
@@ -91,6 +97,7 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
      * @param socket is the socket address of the operator
      */
     function registerOperator(uint8 operatorType, BN254.G1Point memory pk, string calldata socket) external virtual {
+        require(permissionManager.getOperatorPermission(msg.sender) == true, "BLSRegistry.registerOperator: Operator does not permission to register");
         _registerOperator(msg.sender, operatorType, pk, socket);
     }
 
