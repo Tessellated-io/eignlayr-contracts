@@ -12,6 +12,9 @@ import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 
+import "../src/contracts/interfaces/IRegistryPermission.sol";
+
+
 contract EigenLayerParser is Script, DSTest {
     Vm cheats = Vm(HEVM_ADDRESS);
 
@@ -27,6 +30,7 @@ contract EigenLayerParser is Script, DSTest {
     InvestmentStrategyBase public wethStrat;
     IERC20 public eigen;
     InvestmentStrategyBase public eigenStrat;
+    IRegistryPermission public rgPermission;
 
     string internal configJson;
     string internal addressJson;
@@ -44,5 +48,6 @@ contract EigenLayerParser is Script, DSTest {
         wethStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".wethStrat"));
         eigen = IERC20(stdJson.readAddress(addressJson, ".eigen"));
         eigenStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".eigenStrat"));
+        rgPermission = IRegistryPermission(stdJson.readAddress(addressJson, ".rgPermission"));
     }
 }

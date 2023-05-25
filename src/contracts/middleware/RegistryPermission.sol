@@ -17,14 +17,15 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
         _disableInitializers();
     }
 
-    function initialize(address personAddress) public initializer {
+    function initialize(address personAddress, address initialOwner) public initializer {
         permissionPerson = personAddress;
+        _transferOwnership(initialOwner);
     }
 
     function addOperatorPermission(address operator) external {
         require(
             msg.sender == permissionPerson,
-            "RegistryPermission.addOperatorPermission: Only permission person can add permission for operator"
+            "RegistryPermission.addOperatorPermission: Only permissionPerson can add permission for operator"
         );
         operatorPermission[operator] = true;
         emit AddOperatorPermission(operator, true);

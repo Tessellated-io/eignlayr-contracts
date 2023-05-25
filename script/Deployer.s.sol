@@ -64,7 +64,6 @@ contract EigenLayrDeployer is Script, DSTest {
     InvestmentStrategyBase public wethStrat;
     InvestmentStrategyBase public eigenStrat;
     InvestmentStrategyBase public baseStrategyImplementation;
-    RegistryPermission public rgPermissionImplementation;
 
     EmptyContract public emptyContract;
 
@@ -135,7 +134,7 @@ contract EigenLayrDeployer is Script, DSTest {
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
         InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
-        rgPermissionImplementation = new RegistryPermission();
+        RegistryPermission rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
         eigenLayrProxyAdmin.upgradeAndCall(
@@ -153,9 +152,10 @@ contract EigenLayrDeployer is Script, DSTest {
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgrade(
+        eigenLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(rgPermission))),
-            address(rgPermissionImplementation)
+            address(rgPermissionImplementation),
+            abi.encodeWithSelector(RegistryPermission.initialize.selector, msg.sender, eigenLayrReputedMultisig)
         );
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy

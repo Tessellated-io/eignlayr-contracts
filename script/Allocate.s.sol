@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "./utils/Allocator.sol";
 import "./EigenLayerParser.sol";
 
+// forge script script/Allocate.s.sol:Allocate --rpc-url http://127.0.0.1:9545  --private-key 6a6494edf0c00b3d0117f1635ad32a6005587cb6e9e808874da622f7b8925697 --broadcast -vvvv
 contract Allocate is Script, DSTest, EigenLayerParser {
     //performs basic deployment before each test
     function run() external {
@@ -36,7 +37,8 @@ contract Allocate is Script, DSTest, EigenLayerParser {
         address[] memory dispersers = new address[](numDis);
         // deployer allocate weth, eigen to disperser
         for (uint i = 0; i < numDis ; ++i) {
-            address disAddr = stdJson.readAddress(configJson, string.concat(".dis[", string.concat(vm.toString(i), "].address")));    
+            emit log(string.concat(vm.toString(i)));
+            address disAddr = stdJson.readAddress(configJson, string.concat(".dis[", string.concat(vm.toString(i), "].address")));
             dispersers[i] = disAddr;
             emit log("disAddr");
             emit log_address(disAddr);
