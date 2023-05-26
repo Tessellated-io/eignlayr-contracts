@@ -42,7 +42,7 @@ contract BLSPublicKeyCompendium is IBLSPublicKeyCompendium, DSTest {
      */
     function registerBLSPublicKey(uint256 s, BN254.G1Point memory rPoint, BN254.G1Point memory pubkeyG1, BN254.G2Point memory pubkeyG2) external {
         require(
-            permissionManager.getOperatorPermission(msg.sender) == true,
+            permissionManager.getOperatorRegisterPermission(msg.sender) == true,
             "BLSPublicKeyCompendium.registerBLSPublicKey: Operator does not permission to register bls public key"
         );
         // calculate -g1

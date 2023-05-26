@@ -56,7 +56,7 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
      */
     function registerAsOperator(address rewardReceiveAddress) external {
         require(
-            permissionManager.getOperatorPermission(msg.sender) == true,
+            permissionManager.getOperatorRegisterPermission(msg.sender) == true,
             "EigenLayrDelegation.registerAsOperator: Operator does not permission to register as operator"
         );
         require(

@@ -7,7 +7,15 @@ pragma solidity ^0.8.9;
  * @notice See the `RegistryPermission` contract itself for implementation details.
  */
 interface IRegistryPermission {
-    function addOperatorPermission(address operator) external;
-    function changeOperatorPermission(address operator, bool status) external;
-    function getOperatorPermission(address operator) external view returns (bool);
+    function addOperatorRegisterPermission(address operator) external;
+    function addOperatorDeregisterPermission(address operator) external;
+    function addDataStoreRollupPermission(address pusher) external;
+
+    function changeOperatorRegisterPermission(address operator, bool status) external;
+    function changeOperatorDeregisterPermission(address operator, bool status) external;
+    function changeDataStoreRollupPermission(address pusher, bool status) external;
+
+    function getOperatorRegisterPermission(address operator) external view returns (bool);
+    function getOperatorDeregisterPermission(address operator) external view returns (bool);
+    function getDataStoreRollupPermission(address pusher) external view returns (bool);
 }

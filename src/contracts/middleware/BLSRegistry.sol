@@ -98,7 +98,7 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
      */
     function registerOperator(uint8 operatorType, BN254.G1Point memory pk, string calldata socket) external virtual {
         require(
-            permissionManager.getOperatorPermission(msg.sender) == true,
+            permissionManager.getOperatorRegisterPermission(msg.sender) == true,
             "BLSRegistry.registerOperator: Operator does not permission to register"
         );
         _registerOperator(msg.sender, operatorType, pk, socket);
@@ -144,6 +144,10 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
      * @param index is the sender's location in the dynamic array `operatorList`
      */
     function deregisterOperator(BN254.G1Point memory pkToRemove, uint32 index) external virtual returns (bool) {
+        require(
+            permissionManager.getOperatorDeregisterPermission(msg.sender) == true,
+            "BLSRegistry.deregisterOperator: Operator should apply deregister permission first and then can deregister"
+        );
         _deregisterOperator(msg.sender, pkToRemove, index);
         return true;
     }
