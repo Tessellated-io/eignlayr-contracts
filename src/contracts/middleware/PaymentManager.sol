@@ -25,6 +25,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
 
     uint8 constant internal PAUSED_NEW_PAYMENT_COMMIT = 0;
     uint8 constant internal PAUSED_REDEEM_PAYMENT = 1;
+    uint8 constant internal paymentClaimSwitch = 0;
 
     // DATA STRUCTURES
 
@@ -36,7 +37,6 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
     uint256 internal constant MAX_BIPS = 10000;
     /// @notice Gas budget provided in calls to DelegationTerms contracts
     uint256 internal constant LOW_LEVEL_GAS_BUDGET = 1e5;
-
     /**
      * @notice The global EigenLayr Delegation contract, which is primarily used by
      * stakers to delegate their stake to operators who serve as middleware nodes.
@@ -174,6 +174,10 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @dev Once this payment is recorded, a fraud proof period commences during which a challenger can dispute the proposed payment.
      */
     function commitPayment(uint32 toTaskNumber, uint96 amount) external onlyWhenNotPaused(PAUSED_NEW_PAYMENT_COMMIT) {
+        require(
+            paymentClaimSwitch > 0,
+           "PaymentManager.commitPayment: commit payment was closed"
+        );
         // only active operators can call
         require(
             registry.isActiveOperator(msg.sender),
@@ -231,6 +235,10 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @dev This function can only be called after the challenge window for the payment claim has completed.
      */
     function redeemPayment() external onlyWhenNotPaused(PAUSED_REDEEM_PAYMENT) {
+        require(
+            paymentClaimSwitch > 0,
+            "PaymentManager.redeemPayment: redeem payment was closed"
+        );
         // verify that the `msg.sender` has a committed payment
         require(
             operatorToPayment[msg.sender].status == PaymentStatus.COMMITTED,
