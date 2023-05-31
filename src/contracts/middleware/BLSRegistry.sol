@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
+
 import "./RegistryBase.sol";
 import "../interfaces/IBLSPublicKeyCompendium.sol";
 import "../interfaces/IBLSRegistry.sol";
@@ -15,7 +18,7 @@ import "../interfaces/IRegistryPermission.sol";
  * - committing to and finalizing de-registration as an operator
  * - updating the stakes of the operator
  */
-contract BLSRegistry is RegistryBase, IBLSRegistry {
+contract BLSRegistry is Initializable, OwnableUpgradeable, RegistryBase, IBLSRegistry {
     using BytesLib for bytes;
 
     // Hash of the zero public key
@@ -39,6 +42,10 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
      */
     BN254.G1Point public apk;
 
+
+    /// @notice Address that has permission to deregister any operator
+    address public forceDeregister;
+
     // EVENTS
     /**
      * @notice Emitted upon the registration of a new operator for the middleware
@@ -57,12 +64,19 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
         string socket
     );
 
+    /// @notice when applied to a function, ensures that the function is only callable by the `feeSetter`.
+    modifier onlyForceDeregister() {
+        require(msg.sender == forceDeregister, "onlyForceDeregister can do this action");
+        _;
+    }
+
     constructor(
         IInvestmentManager _investmentManager,
         IServiceManager _serviceManager,
         uint8 _NUMBER_OF_QUORUMS,
         IBLSPublicKeyCompendium _pubkeyCompendium,
-        IRegistryPermission _permissionManager
+        IRegistryPermission _permissionManager,
+        address _forceDeregister
     )
         RegistryBase(
             _investmentManager,
@@ -70,17 +84,23 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
             _NUMBER_OF_QUORUMS
         )
     {
-        //set compendium
+        // set compendium
         pubkeyCompendium = _pubkeyCompendium;
+        // set permission
         permissionManager = _permissionManager;
+        // set forceDeregister
+        forceDeregister = _forceDeregister;
     }
 
     /// @notice Initialize the APK, the payment split between quorums, and the quorum strategies + multipliers.
     function initialize(
         uint256[] memory _quorumBips,
+        address initialOwner,
         StrategyAndWeightingMultiplier[] memory _firstQuorumStrategiesConsideredAndMultipliers,
         StrategyAndWeightingMultiplier[] memory _secondQuorumStrategiesConsideredAndMultipliers
     ) public virtual initializer {
+        _transferOwnership(initialOwner);
+
         // process an apk update to get index and totalStake arrays to the same length
         _processApkUpdate(BN254.G1Point(0, 0));
         RegistryBase._initialize(
@@ -149,6 +169,11 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
             "BLSRegistry.deregisterOperator: Operator should apply deregister permission first and then can deregister"
         );
         _deregisterOperator(msg.sender, pkToRemove, index);
+        return true;
+    }
+
+    function forceDeregisterOperator(BN254.G1Point memory pkToRemove, address operator, uint32 index) external onlyForceDeregister returns (bool) {
+        _deregisterOperator(operator, pkToRemove, index);
         return true;
     }
 
@@ -300,6 +325,12 @@ contract BLSRegistry is RegistryBase, IBLSRegistry {
         }));
 
         return newApkHash;
+    }
+
+    /// @notice Used by Eigenlayr governance to adjust the address of the `forceDeregister`
+    function setForceDeregister(address _forceDeregister) external onlyOwner {
+        require(_forceDeregister == address(0), "BLSRegistry.setForceDeregister: forceDeregister address is the zero address");
+        forceDeregister = _forceDeregister;
     }
 
     /**
