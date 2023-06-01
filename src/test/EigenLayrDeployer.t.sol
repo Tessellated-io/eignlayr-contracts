@@ -103,7 +103,6 @@ contract EigenLayrDeployer is Operators {
 
     //performs basic deployment before each test
     function setUp() public virtual {
-        console.log("====>");
         _deployEigenLayrContracts();
 
         fuzzedAddressMapping[address(0)] = true;
