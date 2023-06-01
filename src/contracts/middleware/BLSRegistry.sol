@@ -329,7 +329,7 @@ contract BLSRegistry is Initializable, OwnableUpgradeable, RegistryBase, IBLSReg
 
     /// @notice Used by Eigenlayr governance to adjust the address of the `forceDeregister`
     function setForceDeregister(address _forceDeregister) external onlyOwner {
-        require(_forceDeregister == address(0), "BLSRegistry.setForceDeregister: forceDeregister address is the zero address");
+        require(_forceDeregister != address(0), "BLSRegistry.setForceDeregister: forceDeregister address is the zero address");
         forceDeregister = _forceDeregister;
     }
 
