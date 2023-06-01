@@ -20,6 +20,9 @@ import "../contracts/core/Slasher.sol";
 import "../contracts/permissions/PauserRegistry.sol";
 import "../contracts/middleware/RegistryPermission.sol";
 
+import "../contracts/middleware/BLSPublicKeyCompendium.sol";
+import "../contracts/middleware/BLSRegistry.sol";
+
 import "../contracts/libraries/BytesLib.sol";
 
 import "./utils/Operators.sol";
@@ -28,7 +31,8 @@ import "./mocks/LiquidStakingToken.sol";
 import "./mocks/EmptyContract.sol";
 
 
- import "forge-std/Test.sol";
+import "forge-std/Test.sol";
+import {console}  from "forge-std/console.sol";
 
 contract EigenLayrDeployer is Operators {
     using BytesLib for bytes;
@@ -43,6 +47,7 @@ contract EigenLayrDeployer is Operators {
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
     RegistryPermission public rgPermission;
+    BLSPublicKeyCompendium public bLSPC;
 
     // testing/mock contracts
     IERC20 public eigenToken;
@@ -80,6 +85,7 @@ contract EigenLayrDeployer is Operators {
     address acct_0 = cheats.addr(uint256(priv_key_0));
     address acct_1 = cheats.addr(uint256(priv_key_1));
     address _challenger = address(0x6966904396bF2f8b173350bCcec5007A52669873);
+    address permission = address(11);
 
     address public eigenLayrReputedMultisig = address(this);
     mapping (address => bool) fuzzedAddressMapping;
@@ -97,6 +103,7 @@ contract EigenLayrDeployer is Operators {
 
     //performs basic deployment before each test
     function setUp() public virtual {
+        console.log("====>");
         _deployEigenLayrContracts();
 
         fuzzedAddressMapping[address(0)] = true;
@@ -133,7 +140,7 @@ contract EigenLayrDeployer is Operators {
 
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
-        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermissionImplementation);
+        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
         InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher, rgPermission);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
         rgPermissionImplementation = new RegistryPermission();
@@ -154,10 +161,16 @@ contract EigenLayrDeployer is Operators {
             address(slasherImplementation),
             abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgrade(
+        eigenLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(rgPermission))),
-            address(rgPermissionImplementation)
+            address(rgPermissionImplementation),
+            abi.encodeWithSelector(RegistryPermission.initialize.selector, permission, eigenLayrReputedMultisig)
         );
+        // eigenLayrProxyAdmin.upgrade(
+        //     TransparentUpgradeableProxy(payable(address(rgPermission))),
+        //     address(rgPermissionImplementation)
+        // );
+        bLSPC = new BLSPublicKeyCompendium(rgPermission);
 
         //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy
         weth = new ERC20PresetFixedSupply(

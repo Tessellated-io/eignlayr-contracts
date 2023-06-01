@@ -17,6 +17,8 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
     uint256[] priorTotalShares;
     uint256[] strategyTokenBalance;
 
+    event AddOperatorRegisterPermission(address operator, bool status);
+
     function _testInitiateDelegation(
         uint8 operatorIndex,
         uint256 amountEigenToDeposit,
@@ -59,15 +61,79 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
     // simply tries to register 'sender' as an operator, setting their 'DelegationTerms' contract in EigenLayrDelegation to 'dt'
     // verifies that the storage of EigenLayrDelegation contract is updated appropriately
     function _testRegisterAsOperator(address sender, address rewardAddress) internal {
-        cheats.startPrank(sender);
+
+        cheats.expectRevert(bytes("EigenLayrDelegation.registerAsOperator: Operator does not permission to register as operator"));
+        cheats.prank(address(0));
         delegation.registerAsOperator(rewardAddress);
+
+        (IInvestmentStrategy[] memory delegateStrategies, uint256[] memory delegateShares) =
+            investmentManager.getDeposits(sender);
+
+        uint256 numStrats = delegateShares.length;
+        uint256[] memory inititalSharesInStrats = new uint256[](numStrats);
+        for (uint256 i = 0; i < numStrats; ++i) {
+            inititalSharesInStrats[i] = delegation.operatorShares(rewardAddress, delegateStrategies[i]);
+        }
+
+        cheats.startPrank(sender);
+
+        cheats.expectRevert(bytes("EigenLayrDelegation._delegate: operator has not yet registered as a delegate"));
+        delegation.registerAsOperator(address(0));
+
+        delegation.registerAsOperator(rewardAddress);
+
+        cheats.expectRevert(bytes("EigenLayrDelegation.registerAsOperator: operator has already registered"));
+        delegation.registerAsOperator(rewardAddress);
+
+
         assertTrue(delegation.isOperator(sender), "testRegisterAsOperator: sender is not a operator");
 
         assertTrue(
             sender == rewardAddress, "_testRegisterAsOperator: delegationTerms not set appropriately"
         );
+        assertTrue(
+            delegation.operatorReceiverRewardAddress(sender) == rewardAddress, 
+            "operatorReceiverRewardAddress: delegationTerms not set appropriately"
+        );
 
         assertTrue(delegation.isDelegated(sender), "_testRegisterAsOperator: sender not marked as actively delegated");
+        cheats.stopPrank();
+
+
+        assertTrue(
+            delegation.delegatedTo(sender) == rewardAddress,
+            "_testDelegateToOperator: delegated address not set appropriately"
+        );
+        assertTrue(
+            delegation.isDelegated(sender),
+            "_testDelegateToOperator: delegated status not set appropriately"
+        );
+
+        (delegateStrategies, delegateShares) = investmentManager.getDeposits(sender);
+        numStrats = delegateShares.length;
+        for (uint256 i = 0; i < numStrats; ++i) {
+            uint256 operatorSharesBefore = inititalSharesInStrats[i];
+            uint256 operatorSharesAfter = delegation.operatorShares(rewardAddress, delegateStrategies[i]);
+            assertTrue(
+                operatorSharesAfter == (operatorSharesBefore + delegateShares[i]),
+                "_testDelegateToOperator: delegatedShares not increased correctly"
+            );
+        }
+    }
+
+    function _testAddOperatorRegisterPermission(address operator, address permission) internal {
+
+        cheats.expectRevert(bytes("RegistryPermission.addOperatorRegisterPermission: Only permissionPerson can add permission for operator"));
+        rgPermission.addOperatorRegisterPermission(operator);
+
+        vm.expectEmit(true, true, false, true, address(rgPermission));
+        emit AddOperatorRegisterPermission(operator, true);
+        cheats.startPrank(permission);
+        rgPermission.addOperatorRegisterPermission(operator);
+
+        assertTrue(rgPermission.operatorRegisterPermission(operator), "operatorRegisterPermission: operator haven't permission");
+        assertTrue(rgPermission.getOperatorRegisterPermission(operator), "getOperatorRegisterPermission: operator haven't permission");
+
         cheats.stopPrank();
     }
 
