@@ -114,6 +114,11 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
         _;
     }
 
+    modifier closePaymentManager() {
+        require(paymentClaimSwitch > 0, "closePaymentManager");
+        _;
+    }
+
     constructor(
         IEigenLayrDelegation _eigenLayrDelegation,
         IServiceManager _serviceManager,
@@ -139,13 +144,13 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @param onBehalfOf could be the `msg.sender` themselves, or a different address for whom `msg.sender` is depositing these future fees
      * @param amount is amount of futures fees being deposited
      */
-    function depositFutureFees(address onBehalfOf, uint256 amount) external {
+    function depositFutureFees(address onBehalfOf, uint256 amount) external closePaymentManager {
         paymentToken.safeTransferFrom(msg.sender, address(this), amount);
         depositsOf[onBehalfOf] += amount;
     }
 
     /// @notice Allows the `allowed` address to spend up to `amount` of the `msg.sender`'s funds that have been deposited in this contract
-    function setAllowance(address allowed, uint256 amount) external {
+    function setAllowance(address allowed, uint256 amount) external closePaymentManager {
         allowances[msg.sender][allowed] = amount;
     }
 
@@ -153,12 +158,12 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @notice Modifies the `paymentFraudproofCollateral` amount.
      * @param _paymentFraudproofCollateral The new value for `paymentFraudproofCollateral` to take.
      */
-    function setPaymentFraudproofCollateral(uint256 _paymentFraudproofCollateral) external virtual onlyServiceManagerOwner {
+    function setPaymentFraudproofCollateral(uint256 _paymentFraudproofCollateral) external virtual onlyServiceManagerOwner closePaymentManager {
         _setPaymentFraudproofCollateral(_paymentFraudproofCollateral);
     }
 
     /// @notice Used for deducting the fees from the payer to the middleware
-    function payFee(address initiator, address payer, uint256 feeAmount) external virtual onlyServiceManager {
+    function payFee(address initiator, address payer, uint256 feeAmount) external virtual onlyServiceManager closePaymentManager {
         if (initiator != payer) {
             if (allowances[payer][initiator] != type(uint256).max) {
                 allowances[payer][initiator] -= feeAmount;
@@ -173,11 +178,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @notice This is used by an operator to make a claim on the amount that they deserve for their service from their last payment until `toTaskNumber`
      * @dev Once this payment is recorded, a fraud proof period commences during which a challenger can dispute the proposed payment.
      */
-    function commitPayment(uint32 toTaskNumber, uint96 amount) external onlyWhenNotPaused(PAUSED_NEW_PAYMENT_COMMIT) {
-        require(
-            paymentClaimSwitch > 0,
-           "PaymentManager.commitPayment: commit payment was closed"
-        );
+    function commitPayment(uint32 toTaskNumber, uint96 amount) external onlyWhenNotPaused(PAUSED_NEW_PAYMENT_COMMIT) closePaymentManager {
         // only active operators can call
         require(
             registry.isActiveOperator(msg.sender),
@@ -234,11 +235,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @notice Called by an operator to redeem a payment that they previously 'committed' to by calling `commitPayment`.
      * @dev This function can only be called after the challenge window for the payment claim has completed.
      */
-    function redeemPayment() external onlyWhenNotPaused(PAUSED_REDEEM_PAYMENT) {
-        require(
-            paymentClaimSwitch > 0,
-            "PaymentManager.redeemPayment: redeem payment was closed"
-        );
+    function redeemPayment() external onlyWhenNotPaused(PAUSED_REDEEM_PAYMENT) closePaymentManager {
         // verify that the `msg.sender` has a committed payment
         require(
             operatorToPayment[msg.sender].status == PaymentStatus.COMMITTED,
@@ -277,7 +274,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      * @param amount2 is the reward amount the challenger in that round claims is for the second half of tasks
      *
      */
-    function initPaymentChallenge(address operator, uint96 amount1, uint96 amount2) external {
+    function initPaymentChallenge(address operator, uint96 amount1, uint96 amount2) external closePaymentManager {
         require(
             block.timestamp < operatorToPayment[operator].confirmAt
                 && operatorToPayment[operator].status == PaymentStatus.COMMITTED,
@@ -318,6 +315,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
      */
     function performChallengeBisectionStep(address operator, bool secondHalf, uint96 amount1, uint96 amount2)
         external
+        closePaymentManager
     {
         // copy challenge struct to memory
         PaymentChallenge memory challenge = operatorToPaymentChallenge[operator];
@@ -421,7 +419,7 @@ abstract contract PaymentManager is Initializable, IPaymentManager, Pausable {
     }
 
     /// @notice resolve an existing PaymentChallenge for an operator
-    function resolveChallenge(address operator) external {
+    function resolveChallenge(address operator) external closePaymentManager {
         // copy challenge struct to memory
         PaymentChallenge memory challenge = operatorToPaymentChallenge[operator];
 

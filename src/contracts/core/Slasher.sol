@@ -85,6 +85,11 @@ contract Slasher is Initializable, OwnableUpgradeable, ISlasher, Pausable {
         _;
     }
 
+    modifier closeSlasher() {
+        require(slashingSwitch > 0, "closeSlasher");
+        _;
+    }
+
     // EXTERNAL FUNCTIONS
     function initialize(
         IPauserRegistry _pauserRegistry,
@@ -109,11 +114,7 @@ contract Slasher is Initializable, OwnableUpgradeable, ISlasher, Pausable {
      * @dev Technically the operator is 'frozen' (hence the name of this function), and then subject to slashing pending a decision by a human-in-the-loop.
      * @dev The operator must have previously given the caller (which should be a contract) the ability to slash them, through a call to `optIntoSlashing`.
      */
-    function freezeOperator(address toBeFrozen) external onlyWhenNotPaused(PAUSED_NEW_FREEZING) {
-        require(
-            slashingSwitch > 0,
-            "Slashing.freezeOperator: slashing switch was closed"
-        );
+    function freezeOperator(address toBeFrozen) external onlyWhenNotPaused(PAUSED_NEW_FREEZING) closeSlasher {
         require(
             canSlash(toBeFrozen, msg.sender),
             "Slasher.freezeOperator: msg.sender does not have permission to slash this operator"

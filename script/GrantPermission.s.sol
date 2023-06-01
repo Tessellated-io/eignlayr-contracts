@@ -8,11 +8,12 @@ contract GrantPermission is Script, DSTest, EigenLayerParser {
     function run() external {
         parseEigenLayerParams();
         vm.startBroadcast();
-        address operatorAddr;
         for (uint256 i = 0; i < numDln; i++) {
-            operatorAddr = stdJson.readAddress(configJson, string.concat(".dln[", string.concat(vm.toString(i), "].address")));
+            address operatorAddr = stdJson.readAddress(configJson, string.concat(".dln[", string.concat(vm.toString(i), "].address")));
+            address stakerAddr = stdJson.readAddress(configJson, string.concat(".staker[", string.concat(vm.toString(i), "].address")));
             rgPermission.addOperatorRegisterPermission(operatorAddr);
             rgPermission.addOperatorDeregisterPermission(operatorAddr);
+            rgPermission.addDelegatorPermission(stakerAddr);
         }
         vm.stopBroadcast();
     }

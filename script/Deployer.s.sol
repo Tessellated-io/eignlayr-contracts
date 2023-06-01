@@ -132,7 +132,7 @@ contract EigenLayrDeployer is Script, DSTest {
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher, rgPermission);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
         RegistryPermission rgPermissionImplementation = new RegistryPermission();
 

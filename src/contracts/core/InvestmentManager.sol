@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../permissions/Pausable.sol";
 import "./InvestmentManagerStorage.sol";
 import "../interfaces/IServiceManager.sol";
+import "../interfaces/IRegistryPermission.sol";
 
 // import "forge-std/Test.sol";
 
@@ -39,6 +40,9 @@ contract InvestmentManager is
     uint8 internal constant PAUSED_DEPOSITS = 0;
     uint8 internal constant PAUSED_WITHDRAWALS = 1;
 
+    /// @notice contract used for manage operator delegator permission
+    IRegistryPermission public immutable permissionManager;
+
     /**
      * @notice Emitted when a new withdrawal is queued by `depositor`.
      * @param depositor Is the staker who is withdrawing funds from EigenLayer.
@@ -66,13 +70,21 @@ contract InvestmentManager is
         _;
     }
 
+    modifier onlyStakeAndDelegate() {
+        require(
+            permissionManager.getDelegatorPermission(msg.sender) == true, "InvestmentManager.depositIntoStrategy: staker has not permission to do this action"
+        );
+        _;
+    }
+
     /**
      * @param _delegation The delegation contract of EigenLayr.
      * @param _slasher The primary slashing contract of EigenLayr.
      */
-    constructor(IEigenLayrDelegation _delegation, ISlasher _slasher)
+    constructor(IEigenLayrDelegation _delegation, ISlasher _slasher, IRegistryPermission _permissionManager)
         InvestmentManagerStorage(_delegation, _slasher)
     {
+        permissionManager = _permissionManager;
         _disableInitializers();
     }
 
@@ -107,6 +119,7 @@ contract InvestmentManager is
         onlyWhenNotPaused(PAUSED_DEPOSITS)
         onlyNotFrozen(msg.sender)
         nonReentrant
+        onlyStakeAndDelegate
         returns (uint256 shares)
     {
         shares = _depositIntoStrategy(msg.sender, strategy, token, amount);
@@ -139,6 +152,7 @@ contract InvestmentManager is
         onlyWhenNotPaused(PAUSED_DEPOSITS)
         onlyNotFrozen(staker)
         nonReentrant
+        onlyStakeAndDelegate
         returns (uint256 shares)
     {
         require(
@@ -159,7 +173,7 @@ contract InvestmentManager is
      * @notice Called by a staker to undelegate entirely from EigenLayer. The staker must first withdraw all of their existing deposits
      * (through use of the `queueWithdrawal` function), or else otherwise have never deposited in EigenLayer prior to delegating.
      */
-    function undelegate() external {
+    function undelegate() external onlyStakeAndDelegate {
         _undelegate(msg.sender);
     }
 
@@ -191,6 +205,7 @@ contract InvestmentManager is
         // onlyWhenNotPaused(PAUSED_WITHDRAWALS)
         onlyNotFrozen(msg.sender)
         nonReentrant
+        onlyStakeAndDelegate
         returns (bytes32)
     {
         require(!paused(PAUSED_WITHDRAWALS), "Pausable: index is paused");
@@ -277,6 +292,7 @@ contract InvestmentManager is
         // check that the address that the staker *was delegated to* – at the time that they queued the withdrawal – is not frozen
         onlyNotFrozen(queuedWithdrawal.delegatedAddress)
         nonReentrant
+        onlyStakeAndDelegate
     {
         // find the withdrawalRoot
         bytes32 withdrawalRoot = calculateWithdrawalRoot(queuedWithdrawal);

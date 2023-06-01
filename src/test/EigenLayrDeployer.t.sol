@@ -134,7 +134,7 @@ contract EigenLayrDeployer is Operators {
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermissionImplementation);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher, rgPermission);
         Slasher slasherImplementation = new Slasher(investmentManager, delegation);
         rgPermissionImplementation = new RegistryPermission();
 

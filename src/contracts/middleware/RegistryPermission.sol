@@ -12,16 +12,25 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
     mapping(address => bool) public operatorRegisterPermission;
     mapping(address => bool) public operatorDeregisterPermission;
     mapping(address => bool) public dataStoreRollupPermission;
+    mapping(address => bool) public delegatorPermission;
+
 
     event AddOperatorRegisterPermission(address operator, bool status);
     event AddOperatorDeregisterPermission(address operator, bool status);
     event AddDataStoreRollupPermission(address pusher, bool status);
+    event AddDelegatorPermission(address delegator, bool status);
     event ChangeOperatorRegisterPermission(address operator, bool status);
     event ChangeOperatorDeregisterPermission(address operator, bool status);
     event ChangeDataStoreRollupPermission(address pusher, bool status);
+    event ChangeDelegatorPermission(address delegator, bool status);
 
     constructor() {
         _disableInitializers();
+    }
+
+    modifier onlyPermissionPerson() {
+        require(msg.sender == permissionPerson, "Only the permission person can do this action");
+        _;
     }
 
     function initialize(address personAddress, address initialOwner) public initializer {
@@ -29,38 +38,27 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
         _transferOwnership(initialOwner);
     }
 
-    function addOperatorRegisterPermission(address operator) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.addOperatorRegisterPermission: Only permissionPerson can add permission for operator"
-        );
+    function addOperatorRegisterPermission(address operator) external onlyPermissionPerson {
         operatorRegisterPermission[operator] = true;
         emit AddOperatorRegisterPermission(operator, true);
     }
 
-    function addOperatorDeregisterPermission(address operator) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.addOperatorDeregisterPermission: Only permissionPerson can add permission for operator"
-        );
+    function addOperatorDeregisterPermission(address operator) external onlyPermissionPerson {
         operatorDeregisterPermission[operator] = true;
         emit AddOperatorDeregisterPermission(operator, true);
     }
 
-    function addDataStoreRollupPermission(address pusher) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.addDataStoreRollupPermission: Only permissionPerson can add permission for operator"
-        );
+    function addDataStoreRollupPermission(address pusher) external onlyPermissionPerson {
         dataStoreRollupPermission[pusher] = true;
         emit AddDataStoreRollupPermission(pusher, true);
     }
 
-    function changeOperatorRegisterPermission(address operator, bool status) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.changeOperatorRegisterPermission: Only permission person can change status for operator"
-        );
+    function addDelegatorPermission(address delegator) external onlyPermissionPerson {
+        delegatorPermission[delegator] = true;
+        emit AddDelegatorPermission(delegator, true);
+    }
+
+    function changeOperatorRegisterPermission(address operator, bool status) external onlyPermissionPerson {
         require(
             operatorRegisterPermission[operator] != status,
             "RegistryPermission.changeOperatorRegisterPermission: Status is same, don't need to change"
@@ -69,11 +67,7 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
         emit ChangeOperatorRegisterPermission(operator, status);
     }
 
-    function changeOperatorDeregisterPermission(address operator, bool status) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.changeOperatorDeregisterPermission: Only permission person can change status for operator"
-        );
+    function changeOperatorDeregisterPermission(address operator, bool status) external onlyPermissionPerson {
         require(
             operatorDeregisterPermission[operator] != status,
             "RegistryPermission.changeOperatorDeregisterPermission: Status is same, don't need to change"
@@ -82,17 +76,22 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
         emit ChangeOperatorDeregisterPermission(operator, status);
     }
 
-    function changeDataStoreRollupPermission(address pusher, bool status) external {
-        require(
-            msg.sender == permissionPerson,
-            "RegistryPermission.changeDataStoreRollupPermission: Only permission person can change status for operator"
-        );
+    function changeDataStoreRollupPermission(address pusher, bool status) external onlyPermissionPerson {
         require(
             dataStoreRollupPermission[pusher] != status,
             "RegistryPermission.changeDataStoreRollupPermission: Status is same, don't need to change"
         );
         dataStoreRollupPermission[pusher] = status;
         emit ChangeDataStoreRollupPermission(pusher, status);
+    }
+
+    function changeDelegatorPermission(address delegator, bool status) external onlyPermissionPerson {
+        require(
+            delegatorPermission[delegator] != status,
+            "RegistryPermission.changeDataStoreRollupPermission: Status is same, don't need to change"
+        );
+        delegatorPermission[delegator] = status;
+        emit ChangeDelegatorPermission(delegator, status);
     }
 
     function getOperatorRegisterPermission(address operator) external view returns (bool) {
@@ -107,7 +106,15 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
         return dataStoreRollupPermission[pusher];
     }
 
+    function getDelegatorPermission(address delegator) external view returns (bool) {
+        return delegatorPermission[delegator];
+    }
+
     function setPermissionPerson(address personAddress) external onlyOwner {
+        require(
+            personAddress == address(0),
+            "RegistryPermission.changeDataStoreRollupPermission: personAddress is the zero address"
+        );
         permissionPerson = personAddress;
     }
 }

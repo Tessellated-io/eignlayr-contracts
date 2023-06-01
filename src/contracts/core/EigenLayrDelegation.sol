@@ -73,6 +73,10 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
      *  @param operator is the operator to whom staker (msg.sender) is delegating its assets
      */
     function delegateTo(address operator) external {
+        require(
+            permissionManager.getDelegatorPermission(msg.sender) == true,
+            "InvestmentManager.depositIntoStrategy: delegator has not permission exec delegate to"
+        );
         _delegate(msg.sender, operator);
     }
 
