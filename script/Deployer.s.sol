@@ -47,8 +47,8 @@ contract EigenLayrDeployer is Script, DSTest {
     uint256 public constant DURATION_SCALE = 1 hours;
 
     // EigenLayer contracts
-    ProxyAdmin public eigenLayrProxyAdmin;
-    PauserRegistry public eigenLayrPauserReg;
+    ProxyAdmin public mantleLayrProxyAdmin;
+    PauserRegistry public mantleLayrPauserReg;
     Slasher public slasher;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
@@ -59,10 +59,10 @@ contract EigenLayrDeployer is Script, DSTest {
     RegistryPermission public rgPermission;
 
     // testing/mock contracts
-    IERC20 public eigenToken;
-    IERC20 public weth;
-    InvestmentStrategyBase public wethStrat;
-    InvestmentStrategyBase public eigenStrat;
+    IERC20 public mantleToken;
+
+    InvestmentStrategyBase public mantleFirstStrat;
+    InvestmentStrategyBase public mantleSencodStrat;
     InvestmentStrategyBase public baseStrategyImplementation;
 
     EmptyContract public emptyContract;
@@ -77,7 +77,6 @@ contract EigenLayrDeployer is Script, DSTest {
     //strategy indexes for undelegation (see commitUndelegation function)
     uint256[] public strategyIndexes;
 
-    uint256 wethInitialSupply = 10e50;
     address storer = address(420);
     address registrant = address(0x4206904396bF2f8b173350ADdEc5007A52664293); //sk: e88d9d864d5d731226020c5d2f02b62a4ce2a4534a39c225d32d3db795f83319
 
@@ -90,7 +89,7 @@ contract EigenLayrDeployer is Script, DSTest {
     //     0x1234567812345678123456781234567812345698123456781234567812348976;
     // address acct_1 = cheats.addr(uint256(priv_key_1));
 
-    uint256 public constant eigenTotalSupply = 1000e18;
+    uint256 public constant mantleTotalSupply = 1000e18;
 
     uint256 public gasLimit = 750000;
 
@@ -100,16 +99,16 @@ contract EigenLayrDeployer is Script, DSTest {
         emit log_address(address(this));
         address pauser = msg.sender;
         address unpauser = msg.sender;
-        address eigenLayrReputedMultisig = msg.sender;
+        address mantleLayrReputedMultisig = msg.sender;
 
 
 
 
         // deploy proxy admin for ability to upgrade proxy contracts
-        eigenLayrProxyAdmin = new ProxyAdmin();
+        mantleLayrProxyAdmin = new ProxyAdmin();
 
         //deploy pauser registry
-        eigenLayrPauserReg = new PauserRegistry(pauser, unpauser);
+        mantleLayrPauserReg = new PauserRegistry(pauser, unpauser);
 
         /**
          * First, deploy upgradeable proxy contracts that **will point** to the implementations. Since the implementation contracts are
@@ -117,18 +116,17 @@ contract EigenLayrDeployer is Script, DSTest {
          */
         emptyContract = new EmptyContract();
         delegation = EigenLayrDelegation(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
         investmentManager = InvestmentManager(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
         slasher = Slasher(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
         rgPermission = RegistryPermission(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
-
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
@@ -137,60 +135,52 @@ contract EigenLayrDeployer is Script, DSTest {
         RegistryPermission rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
-        eigenLayrProxyAdmin.upgradeAndCall(
+        mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(delegation))),
             address(delegationImplementation),
-            abi.encodeWithSelector(EigenLayrDelegation.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
+            abi.encodeWithSelector(EigenLayrDelegation.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgradeAndCall(
+        mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(investmentManager))),
             address(investmentManagerImplementation),
-            abi.encodeWithSelector(InvestmentManager.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
+            abi.encodeWithSelector(InvestmentManager.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgradeAndCall(
+        mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(slasher))),
             address(slasherImplementation),
-            abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
+            abi.encodeWithSelector(Slasher.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
         );
-        eigenLayrProxyAdmin.upgradeAndCall(
+        mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(rgPermission))),
             address(rgPermissionImplementation),
-            abi.encodeWithSelector(RegistryPermission.initialize.selector, msg.sender, eigenLayrReputedMultisig)
-        );
-
-        //simple ERC20 (**NOT** WETH-like!), used in a test investment strategy
-        weth = new ERC20PresetFixedSupply(
-            "weth",
-            "WETH",
-            wethInitialSupply,
-            msg.sender
-        );
-
-        // deploy InvestmentStrategyBase contract implementation, then create upgradeable proxy that points to implementation and initialize it
-        baseStrategyImplementation = new InvestmentStrategyBase(investmentManager);
-        wethStrat = InvestmentStrategyBase(
-            address(
-                new TransparentUpgradeableProxy(
-                    address(baseStrategyImplementation),
-                    address(eigenLayrProxyAdmin),
-                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, weth, eigenLayrPauserReg)
-                )
-            )
+            abi.encodeWithSelector(RegistryPermission.initialize.selector, msg.sender, mantleLayrReputedMultisig)
         );
 
         string memory bitAddrStr = vm.envString("L1_BIT_ADDRESS");
         if(bytes(bitAddrStr).length == 42) { // "0x...." string is 42 char long
             address bitAddr = vm.envAddress("L1_BIT_ADDRESS");
-            eigenToken = IERC20(bitAddr);
+            mantleToken = IERC20(bitAddr);
         }
 
-        // deploy upgradeable proxy that points to InvestmentStrategyBase implementation and initialize it
-        eigenStrat = InvestmentStrategyBase(
+        // deploy InvestmentStrategyBase contract implementation, then create upgradeable proxy that points to implementation and initialize it
+        baseStrategyImplementation = new InvestmentStrategyBase(investmentManager);
+        mantleFirstStrat = InvestmentStrategyBase(
             address(
                 new TransparentUpgradeableProxy(
                     address(baseStrategyImplementation),
-                    address(eigenLayrProxyAdmin),
-                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, eigenToken, eigenLayrPauserReg)
+                    address(mantleLayrProxyAdmin),
+                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg)
+                )
+            )
+        );
+
+        // deploy upgradeable proxy that points to InvestmentStrategyBase implementation and initialize it
+        mantleSencodStrat = InvestmentStrategyBase(
+            address(
+                new TransparentUpgradeableProxy(
+                    address(baseStrategyImplementation),
+                    address(mantleLayrProxyAdmin),
+                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg)
                 )
             )
         );
@@ -198,11 +188,9 @@ contract EigenLayrDeployer is Script, DSTest {
         vm.writeFile("data/investmentManager.addr", vm.toString(address(investmentManager)));
         vm.writeFile("data/delegation.addr", vm.toString(address(delegation)));
         vm.writeFile("data/slasher.addr", vm.toString(address(slasher)));
-        vm.writeFile("data/weth.addr", vm.toString(address(weth)));
-        vm.writeFile("data/wethStrat.addr", vm.toString(address(wethStrat)));
-        vm.writeFile("data/eigen.addr", vm.toString(address(eigenToken)));
-        vm.writeFile("data/eigenStrat.addr", vm.toString(address(eigenStrat)));
-        vm.writeFile("data/eigenStrat.addr", vm.toString(address(eigenStrat)));
+        vm.writeFile("data/mantle.addr", vm.toString(address(mantleToken)));
+        vm.writeFile("data/mantleFirstStrat.addr", vm.toString(address(mantleFirstStrat)));
+        vm.writeFile("data/mantleSencodStrat.addr", vm.toString(address(mantleSencodStrat)));
         vm.writeFile("data/rgPermission.addr", vm.toString(address(rgPermission)));
 
         vm.stopBroadcast();

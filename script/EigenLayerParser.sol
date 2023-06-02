@@ -26,10 +26,9 @@ contract EigenLayerParser is Script, DSTest {
     uint256 public constant eigenTotalSupply = 1000e18;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
-    IERC20 public weth;
-    InvestmentStrategyBase public wethStrat;
-    IERC20 public eigen;
-    InvestmentStrategyBase public eigenStrat;
+    InvestmentStrategyBase public mantleFirstStrat;
+    IERC20 public mantle;
+    InvestmentStrategyBase public mantleSencodStrat;
     IRegistryPermission public rgPermission;
 
     string internal configJson;
@@ -44,10 +43,9 @@ contract EigenLayerParser is Script, DSTest {
         addressJson = vm.readFile("data/addresses.json");
         delegation = EigenLayrDelegation(stdJson.readAddress(addressJson, ".delegation"));
         investmentManager = InvestmentManager(stdJson.readAddress(addressJson, ".investmentManager"));
-        weth = IERC20(stdJson.readAddress(addressJson, ".weth"));
-        wethStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".wethStrat"));
-        eigen = IERC20(stdJson.readAddress(addressJson, ".eigen"));
-        eigenStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".eigenStrat"));
+        mantle = IERC20(stdJson.readAddress(addressJson, ".mantle"));
+        mantleFirstStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".mantleFirstStrat"));
+        mantleSencodStrat = InvestmentStrategyBase(stdJson.readAddress(addressJson, ".mantleSencodStrat"));
         rgPermission = IRegistryPermission(stdJson.readAddress(addressJson, ".rgPermission"));
     }
 }

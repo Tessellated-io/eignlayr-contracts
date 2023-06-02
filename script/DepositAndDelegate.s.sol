@@ -9,8 +9,7 @@ contract DepositAndDelegate is Script, DSTest, EigenLayerParser {
     function run() external {
         parseEigenLayerParams();
 
-        // uint256 wethAmount = eigenTotalSupply / (numStaker + numDis + 50); // save 100 portions
-        uint256 wethAmount;
+        uint256 mantleAmount;
 
         address dlnAddr;
 
@@ -20,7 +19,7 @@ contract DepositAndDelegate is Script, DSTest, EigenLayerParser {
             address stakerAddr =
                 stdJson.readAddress(configJson, string.concat(".staker[", string.concat(vm.toString(i), "].address")));
 
-            wethAmount = vm.parseUint(stdJson.readString(configJson, string.concat(".staker[", string.concat(vm.toString(i), "].stake"))));
+            mantleAmount = vm.parseUint(stdJson.readString(configJson, string.concat(".staker[", string.concat(vm.toString(i), "].stake"))));
 
             if (stakerAddr == msg.sender) {
                 dlnAddr =
@@ -29,14 +28,14 @@ contract DepositAndDelegate is Script, DSTest, EigenLayerParser {
             }
         }
 
-        emit log("wethAmount");
-        emit log_uint(wethAmount);
+        emit log("mantleAmount");
+        emit log_uint(mantleAmount);
 
         vm.startBroadcast(msg.sender);
-        eigen.approve(address(investmentManager), wethAmount);
-        investmentManager.depositIntoStrategy(eigenStrat, eigen, wethAmount);
-        weth.approve(address(investmentManager), wethAmount);
-        investmentManager.depositIntoStrategy(wethStrat, weth, wethAmount);
+        mantle.approve(address(investmentManager), mantleAmount);
+        investmentManager.depositIntoStrategy(mantleSencodStrat, mantle, mantleAmount);
+        mantle.approve(address(investmentManager), mantleAmount);
+        investmentManager.depositIntoStrategy(mantleFirstStrat, mantle, mantleAmount);
         delegation.delegateTo(dlnAddr);
         vm.stopBroadcast();
     }

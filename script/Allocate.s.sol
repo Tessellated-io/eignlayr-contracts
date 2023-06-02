@@ -11,18 +11,16 @@ contract Allocate is Script, DSTest, EigenLayerParser {
         // read meta data from json
         parseEigenLayerParams();
 
-        // uint256 wethAmount = eigenTotalSupply / (numStaker + numDis + 50); // save 100 portions
         vm.startBroadcast();
 
         Allocator allocator = new Allocator();
 
-        weth.approve(address(allocator), type(uint256).max);
-        eigen.approve(address(allocator), type(uint256).max);
+        mantle.approve(address(allocator), type(uint256).max);
 
         address[] memory stakers = new address[](numStaker);
         uint256[] memory amounts = new uint256[](numStaker);
         uint256 totalAmount;
-        // deployer allocate weth, eigen to staker
+        // deployer allocate mantle to staker
         for (uint i = 0; i < numStaker ; ++i) {
             address stakerAddr = stdJson.readAddress(configJson, string.concat(".staker[", string.concat(vm.toString(i), "].address")));
             stakers[i] = stakerAddr;
@@ -31,11 +29,11 @@ contract Allocate is Script, DSTest, EigenLayerParser {
             emit log("stakerAddr");
             emit log_address(stakerAddr);
         }
-        allocator.allocateArray(weth, stakers, amounts, totalAmount);
-        allocator.allocateArray(eigen, stakers, amounts, totalAmount);
+        allocator.allocateArray(mantle, stakers, amounts, totalAmount);
+        allocator.allocateArray(mantle, stakers, amounts, totalAmount);
 
         address[] memory dispersers = new address[](numDis);
-        // deployer allocate weth, eigen to disperser
+        // deployer allocate mantle to disperser
         for (uint i = 0; i < numDis ; ++i) {
             emit log(string.concat(vm.toString(i)));
             address disAddr = stdJson.readAddress(configJson, string.concat(".dis[", string.concat(vm.toString(i), "].address")));
@@ -44,32 +42,32 @@ contract Allocate is Script, DSTest, EigenLayerParser {
             emit log_address(disAddr);
         }
 
-        uint256 wethAmount = eigenTotalSupply / 10 / numDis;
-        allocator.allocate(weth, dispersers, wethAmount);
+        uint256 mantleAmount = eigenTotalSupply / 10 / numDis;
+        allocator.allocate(mantle, dispersers, mantleAmount);
 
         vm.stopBroadcast();
     }
 }
 
 contract ProvisionWeth is Script, DSTest, EigenLayerParser {
-    uint256 wethAmount = 100000000000000000000;
+    uint256 mantleAmount = 100000000000000000000;
     //performs basic deployment before each test
 
     function run() external {
         vm.startBroadcast();
         // read meta data from json
         addressJson = vm.readFile("data/addresses.json");
-        weth = IERC20(stdJson.readAddress(addressJson, ".weth"));
+        mantle = IERC20(stdJson.readAddress(addressJson, ".mantle"));
         address dlsm = stdJson.readAddress(addressJson, ".dlsm");
-        // deployer allocate weth, eigen to disperser
+        // deployer allocate mantle to disperser
         uint256 recipientPrivKey = cheats.parseUint(cheats.readLine("data/recipient"));
         emit log_uint(recipientPrivKey);
         address recipientAddr = cheats.addr(recipientPrivKey);
-        weth.transfer(recipientAddr, wethAmount);
+        mantle.transfer(recipientAddr, mantleAmount);
         payable(recipientAddr).transfer(1 ether);
         vm.stopBroadcast();
         //approve dlsm
         vm.broadcast(recipientPrivKey);
-        weth.approve(dlsm, type(uint256).max);
+        mantle.approve(dlsm, type(uint256).max);
     }
 }
