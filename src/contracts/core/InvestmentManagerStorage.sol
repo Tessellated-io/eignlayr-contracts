@@ -35,10 +35,9 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
     mapping(address => mapping(IInvestmentStrategy => uint256)) public investorStratShares;
     // staker => array of strategies in which they have nonzero shares
     mapping(address => IInvestmentStrategy[]) public investorStrats;
-    // hash of withdrawal inputs, aka 'withdrawalRoot' => whether the withdrawal is pending
-    mapping(bytes32 => bool) public withdrawalRootPending;
-    // staker => cumulative number of queued withdrawals they have ever initiated. only increments (doesn't decrement)
-    mapping(address => uint256) public numWithdrawalsQueued;
+
+    // staker => can withdraw from investmentManager contracts
+    mapping(address => bool) public delegatorWithdrawWhiteList;
 
     constructor(IEigenLayrDelegation _delegation, ISlasher _slasher) {
         delegation = _delegation;

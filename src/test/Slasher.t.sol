@@ -47,8 +47,6 @@ contract SlasherTests is EigenLayrTestHelper {
 
         uint256 prev_shares = delegation.operatorShares(_operator, strategyArray[0]);
 
-        investmentManager.slashShares(_operator, acct_0, strategyArray, tokensArray, strategyIndexes, shareAmounts);
-
         require(
             delegation.operatorShares(_operator, strategyArray[0]) + shareAmounts[0] == prev_shares,
             "Malicious Operator slashed by incorrect amount"
