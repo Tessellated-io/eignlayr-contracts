@@ -178,11 +178,11 @@ contract InvestmentManager is
 
         for (uint256 i = 0; i < strategiesLength;) {
             if (_removeShares(msg.sender, strategyIndexes[strategyIndexIndex], strategies[i], shares[i])) {
-                strategies[i].withdraw(msg.sender, tokens[i], shares[i]);
                 unchecked {
                     ++strategyIndexIndex;
                 }
             }
+            strategies[i].withdraw(msg.sender, tokens[i], shares[i]);
             unchecked {
                 ++i;
             }
