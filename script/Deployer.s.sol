@@ -156,10 +156,10 @@ contract EigenLayrDeployer is Script, DSTest {
             abi.encodeWithSelector(RegistryPermission.initialize.selector, msg.sender, mantleLayrReputedMultisig)
         );
 
-        string memory bitAddrStr = vm.envString("L1_BIT_ADDRESS");
-        if(bytes(bitAddrStr).length == 42) { // "0x...." string is 42 char long
-            address bitAddr = vm.envAddress("L1_BIT_ADDRESS");
-            mantleToken = IERC20(bitAddr);
+        string memory mantleAddrStr = vm.envString("L1_MANTLE_ADDRESS");
+        if(bytes(mantleAddrStr).length == 42) { // "0x...." string is 42 char long
+            address mantleAddr = vm.envAddress("L1_MANTLE_ADDRESS");
+            mantleToken = IERC20(mantleAddr);
         }
 
         // deploy InvestmentStrategyBase contract implementation, then create upgradeable proxy that points to implementation and initialize it
