@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "./IInvestmentStrategy.sol";
-import "./ISlasher.sol";
 import "./IEigenLayrDelegation.sol";
 import "./IServiceManager.sol";
 
@@ -90,6 +89,4 @@ interface IInvestmentManager {
     /// @notice Returns the single, central Delegation contract of EigenLayer
     function delegation() external view returns (IEigenLayrDelegation);
 
-    /// @notice Returns the single, central Slasher contract of EigenLayer
-    function slasher() external view returns (ISlasher);
 }

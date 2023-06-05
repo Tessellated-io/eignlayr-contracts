@@ -15,7 +15,6 @@ import "../contracts/interfaces/IVoteWeigher.sol";
 
 import "../contracts/core/InvestmentManager.sol";
 import "../contracts/strategies/InvestmentStrategyBase.sol";
-import "../contracts/core/Slasher.sol";
 
 import "../contracts/permissions/PauserRegistry.sol";
 import "../contracts/middleware/RegistryPermission.sol";
@@ -43,7 +42,6 @@ contract EigenLayrDeployer is Operators {
     ProxyAdmin public eigenLayrProxyAdmin;
     PauserRegistry public eigenLayrPauserReg;
 
-    Slasher public slasher;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
     RegistryPermission public rgPermission;
@@ -109,7 +107,6 @@ contract EigenLayrDeployer is Operators {
         fuzzedAddressMapping[address(eigenLayrProxyAdmin)] = true;
         fuzzedAddressMapping[address(investmentManager)] = true;
         fuzzedAddressMapping[address(delegation)] = true;
-        fuzzedAddressMapping[address(slasher)] = true;
     }
 
     function _deployEigenLayrContracts() internal {
@@ -130,18 +127,14 @@ contract EigenLayrDeployer is Operators {
         investmentManager = InvestmentManager(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
-        slasher = Slasher(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
-        );
         rgPermission = RegistryPermission(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(eigenLayrProxyAdmin), ""))
         );
 
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
-        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher, rgPermission);
-        Slasher slasherImplementation = new Slasher(investmentManager, delegation);
+        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, rgPermission);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, rgPermission);
         rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
@@ -154,11 +147,6 @@ contract EigenLayrDeployer is Operators {
             TransparentUpgradeableProxy(payable(address(investmentManager))),
             address(investmentManagerImplementation),
             abi.encodeWithSelector(InvestmentManager.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
-        );
-        eigenLayrProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(slasher))),
-            address(slasherImplementation),
-            abi.encodeWithSelector(Slasher.initialize.selector, eigenLayrPauserReg, eigenLayrReputedMultisig)
         );
         eigenLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(rgPermission))),

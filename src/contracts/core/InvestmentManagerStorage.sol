@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "../interfaces/IInvestmentManager.sol";
 import "../interfaces/IInvestmentStrategy.sol";
 import "../interfaces/IEigenLayrDelegation.sol";
-import "../interfaces/ISlasher.sol";
 
 /**
  * @title Storage variables for the `InvestmentManager` contract.
@@ -29,7 +28,6 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
 
     // system contracts
     IEigenLayrDelegation public immutable delegation;
-    ISlasher public immutable slasher;
 
     // staker => InvestmentStrategy => number of shares which they currently hold
     mapping(address => mapping(IInvestmentStrategy => uint256)) public investorStratShares;
@@ -39,8 +37,7 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
     // staker => can withdraw from investmentManager contracts
     mapping(address => bool) public delegatorWithdrawWhiteList;
 
-    constructor(IEigenLayrDelegation _delegation, ISlasher _slasher) {
+    constructor(IEigenLayrDelegation _delegation) {
         delegation = _delegation;
-        slasher = _slasher;
     }
 }

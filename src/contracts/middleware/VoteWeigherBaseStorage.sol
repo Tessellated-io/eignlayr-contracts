@@ -32,12 +32,9 @@ abstract contract VoteWeigherBaseStorage is Initializable, IVoteWeigher {
 
     /// @notice The address of the Delegation contract for EigenLayr.
     IEigenLayrDelegation public immutable delegation;
-    
+
     /// @notice The address of the InvestmentManager contract for EigenLayr.
     IInvestmentManager public immutable investmentManager;
-
-    /// @notice The address of the Slasher contract for EigenLayr.
-    ISlasher public immutable slasher;
 
     /// @notice The ServiceManager contract for this middleware, where tasks are created / initiated.
     IServiceManager public immutable serviceManager;
@@ -66,7 +63,6 @@ abstract contract VoteWeigherBaseStorage is Initializable, IVoteWeigher {
         require(_NUMBER_OF_QUORUMS != 0, "VoteWeigherBaseStorage.constructor: _NUMBER_OF_QUORUMS == 0");
         investmentManager = _investmentManager;
         delegation = _investmentManager.delegation();
-        slasher = _investmentManager.slasher();
         serviceManager = _serviceManager;
         NUMBER_OF_QUORUMS = _NUMBER_OF_QUORUMS;
         // disable initializers so that the implementation contract cannot be initialized

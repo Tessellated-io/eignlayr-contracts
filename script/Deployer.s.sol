@@ -14,7 +14,6 @@ import "../src/contracts/core/EigenLayrDelegation.sol";
 
 import "../src/contracts/core/InvestmentManager.sol";
 import "../src/contracts/strategies/InvestmentStrategyBase.sol";
-import "../src/contracts/core/Slasher.sol";
 
 import "../src/contracts/permissions/PauserRegistry.sol";
 import "../src/contracts/middleware/RegistryPermission.sol";
@@ -49,7 +48,6 @@ contract EigenLayrDeployer is Script, DSTest {
     // EigenLayer contracts
     ProxyAdmin public mantleLayrProxyAdmin;
     PauserRegistry public mantleLayrPauserReg;
-    Slasher public slasher;
     EigenLayrDelegation public delegation;
     InvestmentManager public investmentManager;
 
@@ -102,8 +100,6 @@ contract EigenLayrDeployer is Script, DSTest {
         address mantleLayrReputedMultisig = msg.sender;
 
 
-
-
         // deploy proxy admin for ability to upgrade proxy contracts
         mantleLayrProxyAdmin = new ProxyAdmin();
 
@@ -121,17 +117,13 @@ contract EigenLayrDeployer is Script, DSTest {
         investmentManager = InvestmentManager(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
-        slasher = Slasher(
-            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
-        );
         rgPermission = RegistryPermission(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
-        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, slasher, rgPermission);
-        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, slasher, rgPermission);
-        Slasher slasherImplementation = new Slasher(investmentManager, delegation);
+        EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, rgPermission);
+        InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, rgPermission);
         RegistryPermission rgPermissionImplementation = new RegistryPermission();
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
@@ -144,11 +136,6 @@ contract EigenLayrDeployer is Script, DSTest {
             TransparentUpgradeableProxy(payable(address(investmentManager))),
             address(investmentManagerImplementation),
             abi.encodeWithSelector(InvestmentManager.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
-        );
-        mantleLayrProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(slasher))),
-            address(slasherImplementation),
-            abi.encodeWithSelector(Slasher.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
         );
         mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(rgPermission))),
@@ -187,7 +174,6 @@ contract EigenLayrDeployer is Script, DSTest {
 
         vm.writeFile("data/investmentManager.addr", vm.toString(address(investmentManager)));
         vm.writeFile("data/delegation.addr", vm.toString(address(delegation)));
-        vm.writeFile("data/slasher.addr", vm.toString(address(slasher)));
         vm.writeFile("data/mantle.addr", vm.toString(address(mantleToken)));
         vm.writeFile("data/mantleFirstStrat.addr", vm.toString(address(mantleFirstStrat)));
         vm.writeFile("data/mantleSencodStrat.addr", vm.toString(address(mantleSencodStrat)));

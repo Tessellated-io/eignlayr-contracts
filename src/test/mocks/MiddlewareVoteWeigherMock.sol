@@ -35,19 +35,18 @@ contract MiddlewareVoteWeigherMock is RegistryBase, DSTest {
         _addStrategiesConsideredAndMultipliers(1, _secondQuorumStrategiesConsideredAndMultipliers);
     }
 
-    function registerOperator(address operator, uint32 serveUntil) public {        
-        require(slasher.canSlash(operator, address(serviceManager)), "Not opted into slashing");
-        serviceManager.recordFirstStakeUpdate(operator, serveUntil);
+    function registerOperator(address operator, uint32 serveUntil) public {
+        // serviceManager.recordFirstStakeUpdate(operator, serveUntil);
 
     }
 
     function deregisterOperator(address operator) public {
-        uint32 latestTime = serviceManager.latestTime();
-        serviceManager.recordLastStakeUpdateAndRevokeSlashingAbility(operator, latestTime);
+//        uint32 latestTime = serviceManager.latestTime();
+//        serviceManager.recordLastStakeUpdateAndRevokeSlashingAbility(operator, latestTime);
     }
 
     function propagateStakeUpdate(address operator, uint32 blockNumber, uint256 prevElement) external {
-        uint32 serveUntil = serviceManager.latestTime();
-        serviceManager.recordStakeUpdate(operator, blockNumber, serveUntil, prevElement);
+//        uint32 serveUntil = serviceManager.latestTime();
+//        serviceManager.recordStakeUpdate(operator, blockNumber, serveUntil, prevElement);
     }
 }

@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "forge-std/Test.sol";
 import "../../contracts/interfaces/IServiceManager.sol";
 import "../../contracts/interfaces/IInvestmentManager.sol";
-import "../../contracts/interfaces/ISlasher.sol";
 
 import "forge-std/Test.sol";
 
@@ -21,11 +20,6 @@ contract ServiceManagerMock is IServiceManager, DSTest {
         return 0;
     }
 
-    /// @notice Permissioned function that causes the ServiceManager to freeze the operator on EigenLayer, through a call to the Slasher contract
-    function freezeOperator(address operator) external {
-        investmentManager.slasher().freezeOperator(operator);
-    }
-    
     /// @notice Permissioned function to have the ServiceManager forward a call to the slasher, recording an initial stake update (on operator registration)
     function recordFirstStakeUpdate(address operator, uint32 serveUntil) external pure {}
 

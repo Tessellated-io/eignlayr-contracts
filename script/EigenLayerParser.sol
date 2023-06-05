@@ -6,7 +6,6 @@ import "../src/contracts/core/EigenLayrDelegation.sol";
 
 import "../src/contracts/core/InvestmentManager.sol";
 import "../src/contracts/strategies/InvestmentStrategyBase.sol";
-import "../src/contracts/core/Slasher.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";

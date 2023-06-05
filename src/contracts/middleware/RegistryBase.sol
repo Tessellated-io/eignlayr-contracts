@@ -409,9 +409,6 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
         // committing to not signing off on any more middleware tasks
         registry[operator].status = IQuorumRegistry.Status.INACTIVE;
 
-        // record a stake update unbonding the operator after `latestTime`
-        serviceManager.recordLastStakeUpdateAndRevokeSlashingAbility(operator, latestTime);
-
         // Emit `Deregistration` event
         emit Deregistration(operator, swappedOperator, pk, apkHash);
 
@@ -517,11 +514,6 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
     )
         internal virtual
     {
-
-        require(
-            slasher.bondedUntil(operator, address(serviceManager)) == type(uint32).max,
-            "RegistryBase._addRegistrant: operator must be opted into slashing by the serviceManager"
-        );
         // store the Operator's info in mapping
         registry[operator] = Operator({
             pubkeyHash: pubkeyHash,
@@ -558,9 +550,6 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
 
         // Update totalOperatorsHistory array
         _updateTotalOperatorsHistory();
-
-        // record a stake update not bonding the operator at all (unbonded at 0), because they haven't served anything yet
-        serviceManager.recordFirstStakeUpdate(operator, 0);
 
         emit StakeUpdate(
             operator,
@@ -644,8 +633,6 @@ abstract contract RegistryBase is VoteWeigherBase, IQuorumRegistry {
             uint32(block.number);
         // push new stake to storage
         pubkeyHashToStakeHistory[pubkeyHash].push(updatedOperatorStake);
-        // record stake update in the slasher
-        serviceManager.recordStakeUpdate(operator, uint32(block.number), serviceManager.latestTime(), insertAfter);
 
         emit StakeUpdate(
             operator,

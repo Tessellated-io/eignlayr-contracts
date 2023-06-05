@@ -8,7 +8,6 @@ import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./EigenLayrDelegationStorage.sol";
 import "../permissions/Pausable.sol";
-import "./Slasher.sol";
 import "../interfaces/IRegistryPermission.sol";
 
 /**
@@ -33,8 +32,8 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     }
 
     // INITIALIZING FUNCTIONS
-    constructor(IInvestmentManager _investmentManager, ISlasher _slasher, IRegistryPermission _permissionManager)
-        EigenLayrDelegationStorage(_investmentManager, _slasher)
+    constructor(IInvestmentManager _investmentManager,  IRegistryPermission _permissionManager)
+        EigenLayrDelegationStorage(_investmentManager)
     {
         permissionManager = _permissionManager;
         _disableInitializers();
@@ -175,8 +174,6 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
         );
 
         require(isNotDelegated(staker), "EigenLayrDelegation._delegate: staker has existing delegation");
-        // checks that operator has not been frozen
-        require(!slasher.isFrozen(operator), "EigenLayrDelegation._delegate: cannot delegate to a frozen operator");
 
         // record delegation relation between the staker and operator
         delegatedTo[staker] = operator;

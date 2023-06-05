@@ -23,7 +23,6 @@ import "../interfaces/IRegistryPermission.sol";
  * - enabling removal of assets from specified investment strategy(s)
  * - recording deposit of ETH into settlement layer
  * - recording deposit of Eigen for securing EigenLayr
- * - slashing of assets for permissioned strategies
  */
 contract InvestmentManager is
     Initializable,
@@ -60,10 +59,9 @@ contract InvestmentManager is
 
     /**
      * @param _delegation The delegation contract of EigenLayr.
-     * @param _slasher The primary slashing contract of EigenLayr.
      */
-    constructor(IEigenLayrDelegation _delegation, ISlasher _slasher, IRegistryPermission _permissionManager)
-        InvestmentManagerStorage(_delegation, _slasher)
+    constructor(IEigenLayrDelegation _delegation, IRegistryPermission _permissionManager)
+        InvestmentManagerStorage(_delegation)
     {
         permissionManager = _permissionManager;
         _disableInitializers();
