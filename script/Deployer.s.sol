@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import "../src/contracts/interfaces/IEigenLayrDelegation.sol";
 import "../src/contracts/core/EigenLayrDelegation.sol";
-
+import "../src/contracts/core/SlashRecorder.sol";
 
 import "../src/contracts/core/InvestmentManager.sol";
 import "../src/contracts/strategies/InvestmentStrategyBase.sol";
@@ -49,6 +49,7 @@ contract EigenLayrDeployer is Script, DSTest {
     ProxyAdmin public mantleLayrProxyAdmin;
     PauserRegistry public mantleLayrPauserReg;
     EigenLayrDelegation public delegation;
+    SlashRecorder public slashRecorder;
     InvestmentManager public investmentManager;
 
     // DataLayr contracts
@@ -114,6 +115,9 @@ contract EigenLayrDeployer is Script, DSTest {
         delegation = EigenLayrDelegation(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
+        slashRecorder = SlashRecorder(
+            address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
+        );
         investmentManager = InvestmentManager(
             address(new TransparentUpgradeableProxy(address(emptyContract), address(mantleLayrProxyAdmin), ""))
         );
@@ -123,6 +127,7 @@ contract EigenLayrDeployer is Script, DSTest {
 
         // Second, deploy the *implementation* contracts, using the *proxy contracts* as inputs
         EigenLayrDelegation delegationImplementation = new EigenLayrDelegation(investmentManager, rgPermission);
+        SlashRecorder slashRecorderImplementation = new SlashRecorder();
         InvestmentManager investmentManagerImplementation = new InvestmentManager(delegation, rgPermission);
         RegistryPermission rgPermissionImplementation = new RegistryPermission();
 
@@ -131,6 +136,11 @@ contract EigenLayrDeployer is Script, DSTest {
             TransparentUpgradeableProxy(payable(address(delegation))),
             address(delegationImplementation),
             abi.encodeWithSelector(EigenLayrDelegation.initialize.selector, mantleLayrPauserReg, mantleLayrReputedMultisig)
+        );
+        mantleLayrProxyAdmin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(address(slashRecorder))),
+            address(slashRecorderImplementation),
+            abi.encodeWithSelector(EigenLayrDelegation.initialize.selector, msg.sender, mantleLayrReputedMultisig)
         );
         mantleLayrProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(investmentManager))),
@@ -174,6 +184,7 @@ contract EigenLayrDeployer is Script, DSTest {
 
         vm.writeFile("data/investmentManager.addr", vm.toString(address(investmentManager)));
         vm.writeFile("data/delegation.addr", vm.toString(address(delegation)));
+        vm.writeFile("data/slashRecorder.addr", vm.toString(address(slashRecorder)));
         vm.writeFile("data/mantle.addr", vm.toString(address(mantleToken)));
         vm.writeFile("data/mantleFirstStrat.addr", vm.toString(address(mantleFirstStrat)));
         vm.writeFile("data/mantleSencodStrat.addr", vm.toString(address(mantleSencodStrat)));
