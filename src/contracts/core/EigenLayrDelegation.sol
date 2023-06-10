@@ -86,6 +86,10 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
     function delegateToBySignature(address staker, address operator, uint256 expiry, bytes32 r, bytes32 vs)
         external
     {
+        require(
+            permissionManager.getDelegatorPermission(msg.sender) == true,
+            "InvestmentManager.depositIntoStrategy: delegator has not permission exec delegate to"
+        );
         require(expiry == 0 || expiry >= block.timestamp, "delegation signature expired");
         // calculate struct hash, then increment `staker`'s nonce
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, staker, operator, nonces[staker]++, expiry));

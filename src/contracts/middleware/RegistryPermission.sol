@@ -112,7 +112,7 @@ contract RegistryPermission is Initializable, OwnableUpgradeable, IRegistryPermi
 
     function setPermissionPerson(address personAddress) external onlyOwner {
         require(
-            personAddress == address(0),
+            personAddress != address(0),
             "RegistryPermission.changeDataStoreRollupPermission: personAddress is the zero address"
         );
         permissionPerson = personAddress;
