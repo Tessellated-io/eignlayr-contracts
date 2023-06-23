@@ -32,8 +32,8 @@ contract DepositAndDelegate is Script, DSTest, EigenLayerParser {
         emit log_uint(mantleAmount);
 
         vm.startBroadcast(msg.sender);
-        mantle.approve(address(investmentManager), mantleAmount);
-        investmentManager.depositIntoStrategy(mantleSencodStrat, mantle, mantleAmount);
+//        mantle.approve(address(investmentManager), mantleAmount);
+//        investmentManager.depositIntoStrategy(mantleSencodStrat, mantle, mantleAmount);
         mantle.approve(address(investmentManager), mantleAmount);
         investmentManager.depositIntoStrategy(mantleFirstStrat, mantle, mantleAmount);
         delegation.delegateTo(dlnAddr);
