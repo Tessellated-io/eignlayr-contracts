@@ -131,11 +131,6 @@ contract EigenLayrDelegation is Initializable, OwnableUpgradeable, EigenLayrDele
 
             // add strategy shares to delegate's shares
             operatorShares[operator][strategy] += shares;
-
-            IInvestmentStrategy[] memory investorStrats = new IInvestmentStrategy[](1);
-            uint256[] memory investorShares = new uint[](1);
-            investorStrats[0] = strategy;
-            investorShares[0] = shares;
         }
     }
 

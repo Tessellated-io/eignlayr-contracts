@@ -50,7 +50,7 @@ contract Allocate is Script, DSTest, EigenLayerParser {
 }
 
 contract ProvisionWeth is Script, DSTest, EigenLayerParser {
-    uint256 mantleAmount = 100000000000000000000;
+    uint256 mantleAmount = 10000000000000000000000;
     //performs basic deployment before each test
 
     function run() external {

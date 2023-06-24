@@ -3,9 +3,10 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/IInvestmentManager.sol";
 import "../permissions/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
 
 /**
  * @title Base implementation of `IInvestmentStrategy` interface, designed to be inherited from by more complex strategies.
@@ -14,7 +15,7 @@ import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
  * Implements minimal versions of the IInvestmentStrategy functions, this contract is designed to be inherited by
  * more complex investment strategies, which can then override its functions as necessary.
  */
-contract InvestmentStrategyBase is Initializable, Pausable, IInvestmentStrategy {
+contract InvestmentStrategyBase is Initializable, OwnableUpgradeable, Pausable, IInvestmentStrategy {
     using SafeERC20 for IERC20;
 
     uint8 internal constant PAUSED_DEPOSITS = 0;
@@ -29,6 +30,9 @@ contract InvestmentStrategyBase is Initializable, Pausable, IInvestmentStrategy 
     /// @notice The total number of extant shares in thie InvestmentStrategy
     uint256 public totalShares;
 
+    /// @notice min amount for da staking deposit
+    uint256 public minDeposit;
+
     /// @notice Simply checks that the `msg.sender` is the `investmentManager`, which is an address stored immutably at construction.
     modifier onlyInvestmentManager() {
         require(msg.sender == address(investmentManager), "InvestmentStrategyBase.onlyInvestmentManager");
@@ -42,9 +46,12 @@ contract InvestmentStrategyBase is Initializable, Pausable, IInvestmentStrategy 
     }
 
     /// @notice Sets the `underlyingToken` and `pauserRegistry` for the strategy.
-    function initialize(IERC20 _underlyingToken, IPauserRegistry _pauserRegistry) public initializer {
+    function initialize(IERC20 _underlyingToken, IPauserRegistry _pauserRegistry, address initialOwner) public initializer {
         underlyingToken = _underlyingToken;
+
+        minDeposit = 1 * 10e18;
         _initializePauser(_pauserRegistry, UNPAUSE_ALL);
+        _transferOwnership(initialOwner);
     }
 
     /**
@@ -64,6 +71,7 @@ contract InvestmentStrategyBase is Initializable, Pausable, IInvestmentStrategy 
         returns (uint256 newShares)
     {
         require(token == underlyingToken, "InvestmentStrategyBase.deposit: Can only deposit underlyingToken");
+        require(amount >= minDeposit, "InvestmentStrategyBase.deposit: Deposit amount must more than minDeposit");
 
         /**
          * @notice calculation of newShares *mirrors* `underlyingToShares(amount)`, but is different since the balance of `underlyingToken`
@@ -203,5 +211,9 @@ contract InvestmentStrategyBase is Initializable, Pausable, IInvestmentStrategy 
     // slither-disable-next-line dead-code
     function _tokenBalance() internal view virtual returns (uint256) {
         return underlyingToken.balanceOf(address(this));
+    }
+
+    function setMinDepositAmount(uint256 minDepositAmount) external onlyOwner {
+        minDeposit = minDepositAmount;
     }
 }

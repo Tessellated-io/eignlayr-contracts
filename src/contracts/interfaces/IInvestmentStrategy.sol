@@ -80,4 +80,7 @@ interface IInvestmentStrategy {
 
     /// @notice Returns either a brief string explaining the strategy's goal & purpose, or a link to metadata that explains in more detail.
     function explanation() external view returns (string memory);
+
+    /// @notice set min deposit for node staking
+    function setMinDepositAmount(uint256 minDepositAmount) external;
 }

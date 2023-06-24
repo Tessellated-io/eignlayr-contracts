@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "../interfaces/IInvestmentManager.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
 
 /**
  * @title Extremely simple implementation of `IInvestmentStrategy` interface.
@@ -12,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * Assumes shares are always 1-to-1 with the underlyingToken.
  * @dev Unlike `InvestmentStrategyBase`, this contract is *not* designed to be inherited from.
  */
-contract InvestmentStrategyWrapper is IInvestmentStrategy {
+contract InvestmentStrategyWrapper is IInvestmentStrategy, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @notice EigenLayer's InvestmentManager contract
@@ -144,4 +145,6 @@ contract InvestmentStrategyWrapper is IInvestmentStrategy {
     function shares(address user) public view virtual returns (uint256) {
         return IInvestmentManager(investmentManager).investorStratShares(user, IInvestmentStrategy(address(this)));
     }
+
+    function setMinDepositAmount(uint256 minDepositAmount) external onlyOwner {}
 }

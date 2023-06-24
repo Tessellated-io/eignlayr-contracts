@@ -166,7 +166,7 @@ contract EigenLayrDeployer is Script, DSTest {
                 new TransparentUpgradeableProxy(
                     address(baseStrategyImplementation),
                     address(mantleLayrProxyAdmin),
-                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg)
+                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg, mantleLayrReputedMultisig)
                 )
             )
         );
@@ -177,7 +177,7 @@ contract EigenLayrDeployer is Script, DSTest {
                 new TransparentUpgradeableProxy(
                     address(baseStrategyImplementation),
                     address(mantleLayrProxyAdmin),
-                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg)
+                    abi.encodeWithSelector(InvestmentStrategyBase.initialize.selector, mantleToken, mantleLayrPauserReg, mantleLayrReputedMultisig)
                 )
             )
         );
