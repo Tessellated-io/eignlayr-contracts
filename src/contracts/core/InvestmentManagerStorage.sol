@@ -34,6 +34,8 @@ abstract contract InvestmentManagerStorage is IInvestmentManager {
     // staker => array of strategies in which they have nonzero shares
     mapping(address => IInvestmentStrategy[]) public investorStrats;
 
+    mapping(IInvestmentStrategy => bool) public strategyStorage;
+
     // staker => can withdraw from investmentManager contracts
     mapping(address => bool) public delegatorWithdrawWhiteList;
 
