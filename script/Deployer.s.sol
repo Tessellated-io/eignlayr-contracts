@@ -170,6 +170,7 @@ contract EigenLayrDeployer is Script, DSTest {
                 )
             )
         );
+        investmentManager.setInvestmentStrategy(mantleFirstStrat);
 
         // deploy upgradeable proxy that points to InvestmentStrategyBase implementation and initialize it
         mantleSencodStrat = InvestmentStrategyBase(
@@ -181,6 +182,7 @@ contract EigenLayrDeployer is Script, DSTest {
                 )
             )
         );
+        investmentManager.setInvestmentStrategy(mantleSencodStrat);
 
         vm.writeFile("data/investmentManager.addr", vm.toString(address(investmentManager)));
         vm.writeFile("data/delegation.addr", vm.toString(address(delegation)));

@@ -75,15 +75,12 @@ contract InvestmentManager is
      * @param _pauserRegistry Used for access control of pausing.
      * @param initialOwner Ownership of this contract is transferred to this address.
      */
-    function initialize(IPauserRegistry _pauserRegistry, IInvestmentStrategy[] _strategies, address initialOwner)
+    function initialize(IPauserRegistry _pauserRegistry, address initialOwner)
         external
         initializer
     {
         //TODO: abstract this logic into an inherited contract for Delegation and Investment manager and have a conversation about meta transactions in general
         DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, bytes("EigenLayr"), block.chainid, address(this)));
-        for(uint256 i = 0; i < _strategies.length; i++) {
-            strategyStorage[_strategies[i]] = true;
-        }
         _initializePauser(_pauserRegistry, UNPAUSE_ALL);
         _transferOwnership(initialOwner);
     }
@@ -356,5 +353,9 @@ contract InvestmentManager is
 
     function setDelegatorCanWithdraw(address withdrawer) external onlyOwner {
         delegatorWithdrawWhiteList[withdrawer] = true;
+    }
+
+    function setInvestmentStrategy(IInvestmentStrategy _strategy) external onlyOwner {
+        strategyStorage[_strategy] = true;
     }
 }
