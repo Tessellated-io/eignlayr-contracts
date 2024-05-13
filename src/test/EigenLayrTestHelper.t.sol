@@ -123,7 +123,7 @@ contract EigenLayrTestHelper is EigenLayrDeployer {
 
     function _testAddOperatorRegisterPermission(address operator, address permission) internal {
 
-        cheats.expectRevert(bytes("RegistryPermission.addOperatorRegisterPermission: Only permissionPerson can add permission for operator"));
+        cheats.expectRevert(bytes("Only the permission person can do this action"));
         rgPermission.addOperatorRegisterPermission(operator);
 
         vm.expectEmit(true, true, false, true, address(rgPermission));
