@@ -1,4 +1,7 @@
 <a name="introduction"/></a>
+# MantleDA
+The current version of MantleDA is powered by EigenDA technology and licensed by EigenLabs.
+
 # EigenLayer
 EigenLayer (formerly 'EigenLayr') is a set of smart contracts deployed on Ethereum that enable restaking of assets to secure new services.
 At present, this repository contains *both* the contracts for EigenLayer *and* a set of general "middleware" contracts, designed to be reuseable across different applications built on top of EigenLayer.
